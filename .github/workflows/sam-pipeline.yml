@@ -3,7 +3,7 @@ on:
     paths:
       - "backend/**"
     branches:
-      - main
+      - master
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
