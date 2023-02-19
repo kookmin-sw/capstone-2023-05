@@ -3,7 +3,7 @@ on:
         branches:
             - master
 jobs:
-    build-deploy:
+    backend-build-deploy:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
@@ -14,6 +14,7 @@ jobs:
                   aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
                   aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
                   aws-region: ${{ secrets.AWS_REGION }}
+
             - name: Build SAM
               working-directory: ./backend
               run: sam build --use-container
@@ -24,4 +25,7 @@ jobs:
             - name: Deploy SAM
               working-directory: ./backend
               run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name naruhodoo-backend --s3-bucket naruhodoo-lambda-bucket --capabilities CAPABILITY_IAM --region ${{ secrets.AWS_REGION }}
+    frontend-build-deploy:
+        runs-on: ubuntu-latest
+        steps: 
               
