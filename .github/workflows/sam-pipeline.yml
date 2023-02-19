@@ -8,6 +8,8 @@ jobs:
     build-deploy:
         runs-on: ubuntu-latest
         steps:
+            - name: Backend Deploy
+            - working-directory: ./backend
             - uses: actions/checkout@v2
             - uses: actions/setup-python@v2
             - uses: aws-actions/setup-sam@v1
