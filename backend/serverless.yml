@@ -26,5 +26,5 @@ custom:
     domainName: ${env:CUSTOM_DOMAIN}
     stage: ${self:provider.stage}
     basePath: ${self:provider.stage}
-    certificateName: '${env:CUSTOM_DOMAIN}'
+    certificateName: ${env:CERTIFICATE_NAME}
     createRoute53Record: true
