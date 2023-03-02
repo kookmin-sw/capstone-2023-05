@@ -1,0 +1,30 @@
+service: aws-python-project
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: ap-northeast-2
+  profile: ${env:AWS_PROFILE}
+  stage: ${opt:stage, 'dev'}
+
+functions:
+  hello:
+    handler: functions/handler.hello
+    events:
+      - http:
+          path: /hello
+          method: get
+
+plugins:
+  - serverless-python-requirements
+  - serverless-domain-manager
+
+custom:
+  customDomain:
+    domainName: ${env:CUSTOM_DOMAIN}
+    stage: ${self:provider.stage}
+    basePath: ${self:provider.stage}
+    certificateName: '${env:CUSTOM_DOMAIN}'
+    createRoute53Record: true
