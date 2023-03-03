@@ -362,4 +362,8 @@ poetry.toml
 # ruff
 .ruff_cache/
 
-# End of https://www.toptal.com/developers/gitignore/api/python,macos,node
+### direnv ###
+.direnv
+.envrc
+
+# End of https://www.toptal.com/developers/gitignore/api/python,macos,node,direnv
