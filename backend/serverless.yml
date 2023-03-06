@@ -9,15 +9,6 @@ provider:
   profile: ${env:AWS_PROFILE}
   stage: ${opt:stage, 'dev'}
 
-  iam.role.statements:
-    - Effect: Allow
-      Action:
-        - cognito-idp:AdminCreateUser
-        - cognito-idp:AdminDeleteUser
-        - cognito-idp:AdminGetUser
-        - cognito-idp:AdminUpdateUserAttributes
-      Resource: '*'
-
 functions:
   hello:
     handler: functions/handler.hello
@@ -26,16 +17,15 @@ functions:
           path: /hello
           method: get
 
-  app:
-    handler: functions/app.kakao_login
+  show_kakao_login:
+    handler: functions/handler.show_kakao_login
     events:
       - http:
-          path: /login/kakao
+          path: /login
           method: get
 
 plugins:
   - serverless-python-requirements
-  - serverless-wsgi
   - serverless-domain-manager
 
 custom:
@@ -45,8 +35,3 @@ custom:
     basePath: ${self:provider.stage}
     certificateName: ${env:CERTIFICATE_NAME}
     createRoute53Record: true
-    wsgi:
-      app: app.app
-      packRequirements: false
-    pythonRequirements:
-      dockerizePip: non-linux
