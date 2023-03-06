@@ -26,7 +26,7 @@ functions:
           path: /hello
           method: get
 
-  app:
+  kakao_signin:
     handler: functions/app.kakao_login
     events:
       - http:
@@ -35,8 +35,8 @@ functions:
 
 plugins:
   - serverless-python-requirements
-  - serverless-wsgi
   - serverless-domain-manager
+  - serverless-offline
 
 custom:
   customDomain:
@@ -45,8 +45,3 @@ custom:
     basePath: ${self:provider.stage}
     certificateName: ${env:CERTIFICATE_NAME}
     createRoute53Record: true
-    wsgi:
-      app: app.app
-      packRequirements: false
-    pythonRequirements:
-      dockerizePip: non-linux
