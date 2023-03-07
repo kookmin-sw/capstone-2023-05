@@ -17,16 +17,17 @@ functions:
           path: /hello
           method: get
 
-  show_kakao_login:
-    handler: functions/handler.show_kakao_login
+  kakao_login:
+    handler: functions/handler.kakao_login
     events:
       - http:
-          path: /login
+          path: /login/kakao
           method: get
 
 plugins:
   - serverless-python-requirements
   - serverless-domain-manager
+  - serverless-offline
 
 custom:
   customDomain:
