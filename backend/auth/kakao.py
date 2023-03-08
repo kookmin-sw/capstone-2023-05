@@ -7,7 +7,6 @@ def get_properties(code):
     Trying to login through Kakao account\n
     You should replace those things below\n
     - Kakao application: client_id(REST API Key), client_secret, redirect_uri\n
-    - AWS Cognito: ClientId(User Pool application client ID)\n
     :return:
     """
 
@@ -24,12 +23,12 @@ def get_properties(code):
         'code': code
     }
     response = requests.post("https://kauth.kakao.com/oauth/token", params=parameters)
-    print(response.json())
     access_token = response.json()['access_token']
 
     headers = {'Authorization': f'Bearer {access_token}'}
     user_information = requests.get("https://kapi.kakao.com/v2/user/me", headers=headers).json()
-    print("User information: ", user_information)
+    # print(user_information)
+
     user_email = user_information['kakao_account']['email']
     user_nickname = user_information['kakao_account']['profile']['nickname']
 
