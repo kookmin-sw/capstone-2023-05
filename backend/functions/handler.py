@@ -18,23 +18,30 @@ def hello(event, context):
 def kakao_login(event, context):
     """
     Trying to login through Kakao account\n
-    :return:
+    :return: Response for Kakao login.
     """
 
     # Get authorized code from Kakao
     access_code = event['queryStringParameters']['code']
     email, nickname = kakao.get_properties(access_code)
-    print("Before sign-in, email:", email)
+    # print("Before sign-in, email:", email)
 
-    access_token = cognito.sign_in(email, nickname)
-    print("After sign-in, email:", email)
+    # Sign in to cognito user pool. And get ID token.
+    # If user name is not in user pool, do sign-up first.
+    id_token = cognito.sign_in(email, nickname)
 
-    # return email, nickname and access_code for test
+    # Exchange ID token for temporary credentials.
+    temp_credentials = cognito.get_temp_cred(id_token)
+
+    # return email, nickname and temp_credentials for test
     return {
         "statusCode": 200,
         "body": json.dumps({
             'email': email,
             'nickname': nickname,
-            'access-token': access_token
+            'temp-cred': {
+                'SessionToken': temp_credentials['SessionToken'],
+                'Expiration': temp_credentials['Expiration'].strftime("%Y-%m-%d %H:%M:%S")
+            }
         })
     }

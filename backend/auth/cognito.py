@@ -8,7 +8,7 @@ def sign_in(email: str, nickname: str) -> str:
     If user didn't register in cognito. Do sign-up\n
     :param email: Kakao email
     :param nickname: Kakao nickname
-    :return: access token
+    :return: ID token
     """
     client = boto3.client('cognito-idp', region_name='ap-northeast-2')
 
@@ -39,7 +39,7 @@ def sign_in(email: str, nickname: str) -> str:
     )
     # print("Second response:\n", response)
 
-    return response['AuthenticationResult']['AccessToken']
+    return response['AuthenticationResult']['IdToken']
 
 
 def sign_up(_client, email: str, nickname: str):
@@ -79,3 +79,29 @@ def sign_up(_client, email: str, nickname: str):
         Password='Naruhodo5!',
         Permanent=True
     )
+
+
+def get_temp_cred(id_token: str) -> dict:
+    """
+    Trying to get temporary credentials to user in cognito user pool.\n
+    :param id_token: ID Token you get from cognito user pool\n
+    :return: Information about temporary credentials.\n
+    """
+
+    # Get Identity ID to get temp credentials.
+    client = boto3.client('cognito-identity')
+    identity_id = client.get_id(IdentityPoolId=os.getenv('AWS_COGNITO_IDENTITY_POOL_ID'))['IdentityId']
+    # print(identity_id)
+
+    # Get temp credentials
+    user_pool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
+    response = client.get_credentials_for_identity(
+        IdentityId=identity_id,
+        Logins={
+            f"cognito-idp.ap-northeast-2.amazonaws.com/{user_pool_id}": id_token,
+            #'Google': 'accounts.google.com'
+        }
+    )
+    # print(response['Credentials'])
+
+    return response['Credentials']
