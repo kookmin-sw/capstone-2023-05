@@ -24,6 +24,13 @@ functions:
           path: /login/kakao
           method: get
 
+  cognito_login:
+    handler: functions/handler.cognito_login
+    events:
+      - http:
+          path: /login/cognito
+          method: get
+
 plugins:
   - serverless-python-requirements
   - serverless-domain-manager

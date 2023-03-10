@@ -2,7 +2,7 @@ import boto3
 import os
 
 
-def sign_in(email: str, nickname: str) -> str:
+def sign_in(email: str, nickname: str, identity_provider: str=None) -> str:
     """
     Trying to sign-in with kakao account.\n
     If user didn't register in cognito. Do sign-up\n
@@ -37,9 +37,18 @@ def sign_in(email: str, nickname: str) -> str:
         },
         ClientId=os.getenv("AWS_COGNITO_CLIENT_ID")
     )
+    id_token = response['AuthenticationResult']['IdToken']
     # print("Second response:\n", response)
 
-    return response['AuthenticationResult']['IdToken']
+    # Add user to group in cognito user pool
+    if identity_provider is not None:
+        response = client.admin_add_user_to_group(
+            UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
+            Username=nickname,
+            GroupName=os.getenv("AWS_COGNITO_USER_POOL_ID") + "_" + identity_provider
+        )
+
+    return id_token
 
 
 def sign_up(_client, email: str, nickname: str):
@@ -81,7 +90,7 @@ def sign_up(_client, email: str, nickname: str):
     )
 
 
-def get_temp_cred(id_token: str) -> dict:
+def get_temp_cred(id_token: str, identity_provider: str) -> dict:
     """
     Trying to get temporary credentials to user in cognito user pool.\n
     :param id_token: ID Token you get from cognito user pool\n
@@ -94,14 +103,17 @@ def get_temp_cred(id_token: str) -> dict:
     # print(identity_id)
 
     # Get temp credentials
-    user_pool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
-    response = client.get_credentials_for_identity(
-        IdentityId=identity_id,
-        Logins={
-            f"cognito-idp.ap-northeast-2.amazonaws.com/{user_pool_id}": id_token,
-            #'Google': 'accounts.google.com'
-        }
-    )
+    if identity_provider == "Kakao":
+        user_pool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
+        response = client.get_credentials_for_identity(
+            IdentityId=identity_id,
+            Logins={f"cognito-idp.ap-northeast-2.amazonaws.com/{user_pool_id}": id_token}
+        )
+    elif identity_provider == "Google":
+        response = client.get_credentials_for_identity(
+            IdentityId=identity_id,
+            Logins={f"accouts.google.com": id_token}
+        )
     # print(response['Credentials'])
 
     return response['Credentials']

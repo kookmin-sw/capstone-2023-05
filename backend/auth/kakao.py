@@ -2,7 +2,7 @@ import requests
 import os
 
 
-def get_properties(code):
+def get_email(code):
     """
     Trying to login through Kakao account\n
     You should replace those things below\n
@@ -30,6 +30,5 @@ def get_properties(code):
     # print(user_information)
 
     user_email = user_information['kakao_account']['email']
-    user_nickname = user_information['kakao_account']['profile']['nickname']
 
-    return user_email, user_nickname
+    return user_email
