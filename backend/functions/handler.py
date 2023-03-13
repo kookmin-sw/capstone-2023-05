@@ -1,6 +1,6 @@
 import json
 import tqdm
-import requests
+import datetime
 import auth.kakao as kakao
 import auth.cognito as cognito
 
@@ -77,6 +77,8 @@ def cognito_login(event, context):
 
     # Exchange ID token for temporary credentials.
     temp_credentials = cognito.get_temp_cred(id_token, "Kakao")
+    expire_time = temp_credentials['Expiration']
+    temp_credentials['Expiration'] = expire_time.strftime("%Y-%m-%d %H:%M:%S")
 
     # return email, nickname and temp_credentials for test
     return {
