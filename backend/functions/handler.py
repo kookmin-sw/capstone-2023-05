@@ -54,12 +54,12 @@ def kakao_login(event, context):
                         var nickname = document.getElementById("nickname").value;
 
                         // do something with the nickname, like redirect to a new page
-                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&token=%s";
+                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&token=%s&newuser=%d";
                     }
                 </script>
             </body>
         </html>
-        """ % (email, nickname, email, cognito_id_token)
+        """ % (email, nickname, email, cognito_id_token, 1)
 
         return {
             "statusCode": 302,
@@ -69,13 +69,17 @@ def kakao_login(event, context):
     else:
         return {
             "statusCode": 302,
-            "headers": {"Location": "http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s" % (email, nickname, cognito_id_token)}
+            "headers": {"Location": "http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&newuser=%d" % (email, nickname, cognito_id_token, 0)}
         }
 
 def cognito_login(event, context):
     email = event['queryStringParameters']['email']
-    nickname = event['queryStringParameters']['nickname']    # Will be same as email
+    nickname = event['queryStringParameters']['nickname']
     id_token = event['queryStringParameters']['token']
+    is_newbie = event['queryStringParameters']['newuser']
+
+    if is_newbie:
+        cognito.set_nickname(email, nickname)
 
     # Exchange ID token for temporary credentials.
     temp_credentials = cognito.get_temp_cred(id_token, "Kakao")
