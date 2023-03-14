@@ -31,6 +31,13 @@ functions:
           path: /login/cognito
           method: get
 
+  delete_account:
+    handler: functions/handler.delete_account
+    events:
+      - http:
+          path: /delete
+          method: put
+
 plugins:
   - serverless-python-requirements
   - serverless-domain-manager

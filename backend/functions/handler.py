@@ -66,6 +66,7 @@ def kakao_login(event, context):
             "headers": {"Content-Type": "text/html"}
         }
     else:
+        # Show this html to redirecting
         redirect_html = """
         <!DOCTYPE html>
         <html>
@@ -88,18 +89,15 @@ def kakao_login(event, context):
             "body": redirect_html,
             "headers": {"Content-Type": "text/html"}
         }
-        # return {
-        #     "statusCode": 302,
-        #     "headers": {"Location": "http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&newuser=%d" % (email, nickname, cognito_id_token, 0)}
-        # }
+    
 
 def cognito_login(event, context):
     email = event['queryStringParameters']['email']
     nickname = event['queryStringParameters']['nickname']
     id_token = event['queryStringParameters']['token']
     is_newbie = event['queryStringParameters']['newuser']
-    print(email, nickname, id_token, is_newbie)
 
+    # If user is new, set nickname
     if is_newbie:
         cognito.set_nickname(email, nickname)
 
@@ -119,6 +117,10 @@ def cognito_login(event, context):
     }
 
 
+def delete_account(event, context):
+    cognito.delete_account(event['queryStringParameters']['email'])
+
+    
 # def google_login(event, context):
 #     # TODO: How to get ID token? It is on the redirect url, but token is not in queryParameters!
 #     # print(event)

@@ -2,7 +2,12 @@ import boto3
 import os
 
 
-def set_nickname(user_name: str, nickname: str):
+def set_nickname(user_name: str, nickname: str) -> None:
+    """
+    Trying to setting nickname\n
+    :param user_name: Username(This should be same as email)
+    :param nickname: A nickname you want to set
+    """
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     _ = idp_client.admin_update_user_attributes(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
@@ -21,7 +26,6 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
     Trying to sign-in with kakao account.\n
     If user didn't register in cognito. Do sign-up\n
     :param email: Kakao email
-    :param nickname: Kakao nickname
     :return: ID token and flag for checking newbie
     """
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
@@ -31,7 +35,6 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
     response = idp_client.list_users(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID")
     )
-    # print("First Response:\n", response['Users'])
 
     # TODO: I want to change this for statement to try-excpet structure.
     # Then, I have to know how to catch UserExistsException
@@ -58,7 +61,6 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
         ClientId=os.getenv("AWS_COGNITO_CLIENT_ID")
     )
     id_token = response['AuthenticationResult']['IdToken']
-    # print("Second response:\n", response)
 
     # Add user to group in cognito user pool
     if identity_provider is not None:
@@ -97,6 +99,14 @@ def sign_up(_client, email: str):
         Username=email,
         Password='Naruhodo5!',
         Permanent=True
+    )
+
+
+def delete_account(name: str):
+    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
+    idp_client.admin_delete_user(
+        UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
+        Username=name
     )
 
 
