@@ -4,7 +4,7 @@ import os
 
 def set_nickname(user_name: str, nickname: str):
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
-    response = idp_client.admin_update_user_attributes(
+    _ = idp_client.admin_update_user_attributes(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
         Username=user_name,
         UserAttributes=[
@@ -42,7 +42,6 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
             for attr in user['Attributes']:
                 if attr['Name'] == "nickname":
                     nickname = attr['Value']
-                    print(nickname)
                     break
             break
     else:

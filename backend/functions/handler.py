@@ -1,6 +1,5 @@
 import json
 import tqdm
-import boto3
 import auth.kakao as kakao
 import auth.cognito as cognito
 
@@ -67,16 +66,39 @@ def kakao_login(event, context):
             "headers": {"Content-Type": "text/html"}
         }
     else:
+        redirect_html = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>You already have account!</title>
+            </head>
+            <body>
+                <h1>Your Account</h1>
+                <li> email: %s</li>
+                <li> nickname: %s</li>
+                <p>
+                    <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&newuser=%d">Continue with your account</a>
+                </p>
+            </body>
+        </html>
+        """ % (email, nickname, email, nickname, cognito_id_token, 0)
+
         return {
             "statusCode": 302,
-            "headers": {"Location": "http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&newuser=%d" % (email, nickname, cognito_id_token, 0)}
+            "body": redirect_html,
+            "headers": {"Content-Type": "text/html"}
         }
+        # return {
+        #     "statusCode": 302,
+        #     "headers": {"Location": "http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&newuser=%d" % (email, nickname, cognito_id_token, 0)}
+        # }
 
 def cognito_login(event, context):
     email = event['queryStringParameters']['email']
     nickname = event['queryStringParameters']['nickname']
     id_token = event['queryStringParameters']['token']
     is_newbie = event['queryStringParameters']['newuser']
+    print(email, nickname, id_token, is_newbie)
 
     if is_newbie:
         cognito.set_nickname(email, nickname)
