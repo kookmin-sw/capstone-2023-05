@@ -11,10 +11,10 @@ provider:
 
 functions:
   hello:
-    handler: functions/handler.hello
+    handler: src/app/handler.hello
     events:
       - http:
-          path: src/app/hello
+          path: /hello
           method: get
 
 plugins:
