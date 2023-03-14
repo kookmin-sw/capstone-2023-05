@@ -2,37 +2,44 @@ import boto3
 import os
 
 
-def sign_in(email: str, nickname: str, identity_provider: str=None) -> str:
+def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
     """
     Trying to sign-in with kakao account.\n
     If user didn't register in cognito. Do sign-up\n
     :param email: Kakao email
     :param nickname: Kakao nickname
-    :return: ID token
+    :return: ID token and flag for checking newbie
     """
-    client = boto3.client('cognito-idp', region_name='ap-northeast-2')
+    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
 
     # Checking if user already in cognito user pool or not.
     # If not exist, do sign-up
-    response = client.list_users(
+    response = idp_client.list_users(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID")
     )
     # print("First Response:\n", response['Users'])
 
     # TODO: I want to change this for statement to try-excpet structure.
     # Then, I have to know how to catch UserExistsException
+    new_created = False
+    nickname = "TempNickname"
     for user in response['Users']:
-        if nickname == user['Username']:
-            print("Already exist!")
+        if email == user['Username']:
+            for attr in user['Attributes']:
+                if attr['Name'] == "nickname":
+                    nickname = attr['Value']
+                    print(nickname)
+                    break
             break
     else:
-        sign_up(client, email, nickname)
+        sign_up(idp_client, email)
+        new_created = True
     
     # Do initiate_auth to get access token
-    response = client.initiate_auth(
+    response = idp_client.initiate_auth(
         AuthFlow='USER_PASSWORD_AUTH',
         AuthParameters={
-            'USERNAME': nickname,
+            'USERNAME': email,
             'PASSWORD': "Naruhodo5!"
         },
         ClientId=os.getenv("AWS_COGNITO_CLIENT_ID")
@@ -42,16 +49,16 @@ def sign_in(email: str, nickname: str, identity_provider: str=None) -> str:
 
     # Add user to group in cognito user pool
     if identity_provider is not None:
-        response = client.admin_add_user_to_group(
+        response = idp_client.admin_add_user_to_group(
             UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
-            Username=nickname,
+            Username=email,
             GroupName=os.getenv("AWS_COGNITO_USER_POOL_ID") + "_" + identity_provider
         )
 
-    return id_token
+    return id_token, nickname, new_created
 
 
-def sign_up(_client, email: str, nickname: str):
+def sign_up(_client, email: str):
     """
     Trying to sign-up user logged in from Kakao.\n
     :param _client: boto3.client object
@@ -61,21 +68,11 @@ def sign_up(_client, email: str, nickname: str):
     # Create user to cognito user pool
     _ = _client.admin_create_user(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
-        Username=nickname,
+        Username=email,
         UserAttributes=[
             {
-                'Name': 'email',
-                'Value': email
-            },
-            {
                 'Name': 'nickname',
-                'Value': nickname
-            }
-        ],
-        ValidationData=[
-            {
-                'Name': 'email',
-                'Value': email
+                'Value': 'TempNickname'
             }
         ],
         TemporaryPassword="testPW1234!"
@@ -84,7 +81,7 @@ def sign_up(_client, email: str, nickname: str):
     # Change to new password
     _ = _client.admin_set_user_password(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
-        Username=nickname,
+        Username=email,
         Password='Naruhodo5!',
         Permanent=True
     )
@@ -98,19 +95,19 @@ def get_temp_cred(id_token: str, identity_provider: str) -> dict:
     """
 
     # Get Identity ID to get temp credentials.
-    client = boto3.client('cognito-identity')
-    identity_id = client.get_id(IdentityPoolId=os.getenv('AWS_COGNITO_IDENTITY_POOL_ID'))['IdentityId']
+    idp_client = boto3.client('cognito-identity')
+    identity_id = idp_client.get_id(IdentityPoolId=os.getenv('AWS_COGNITO_IDENTITY_POOL_ID'))['IdentityId']
     # print(identity_id)
 
     # Get temp credentials
     if identity_provider == "Kakao":
         user_pool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
-        response = client.get_credentials_for_identity(
+        response = idp_client.get_credentials_for_identity(
             IdentityId=identity_id,
             Logins={f"cognito-idp.ap-northeast-2.amazonaws.com/{user_pool_id}": id_token}
         )
     elif identity_provider == "Google":
-        response = client.get_credentials_for_identity(
+        response = idp_client.get_credentials_for_identity(
             IdentityId=identity_id,
             Logins={f"accouts.google.com": id_token}
         )

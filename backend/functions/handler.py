@@ -1,6 +1,6 @@
 import json
 import tqdm
-import datetime
+import boto3
 import auth.kakao as kakao
 import auth.cognito as cognito
 
@@ -25,55 +25,57 @@ def kakao_login(event, context):
     access_code = event['queryStringParameters']['code']
     email = kakao.get_email(access_code)
 
-    # TODO: It has two situations. One is email is not in cognito pool. The other is email is in cognito pool.
-    # When email is already in pool, we don't have to show under html!
-    # How can we figure this?
+    # Sign in to cognito user pool. And get ID token.
+    # If user email is not in user pool, do sign-up first.
+    cognito_id_token, nickname, is_newbie = cognito.sign_in(email, "Kakao")
 
-    # Show this html to getting user's nickname
-    get_nickname_html = """
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <title>Enter your nickname</title>
-        </head>
-        <body>
-            <p>Your Email: %s</p>
-            <p>Enter your nickname below</p>
-            <form>
-                <label for="nickname">Nickname:</label>
-                <input type="text" id="nickname" name="nickname"><br><br>
-                <input type="button" value="Continue" onclick="submitNickname()">
-            </form>
+    # If user is newbie to our service, get nickname from user.
+    if is_newbie:
+        # Show this html to getting user's nickname
+        get_nickname_html = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Enter your nickname</title>
+            </head>
+            <body>
+                <p>Your e-mail: %s</p>
+                <p>Your current nickname: %s</p>
+                <p>Enter your nickname below</p>
+                <form>
+                    <label for="nickname">New nickname:</label>
+                    <input type="text" id="nickname" name="nickname"><br><br>
+                    <input type="button" value="Continue" onclick="submitNickname()">
+                </form>
 
-            <script>
-                function submitNickname() {
-                    // get the nickname from the input field
-                    var nickname = document.getElementById("nickname").value;
+                <script>
+                    function submitNickname() {
+                        // get the nickname from the input field
+                        var nickname = document.getElementById("nickname").value;
 
-                    // do something with the nickname, like redirect to a new page
-                    window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname;
-                }
-            </script>
-        </body>
-    </html>
-    """ % (email, email)
+                        // do something with the nickname, like redirect to a new page
+                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&token=%s";
+                    }
+                </script>
+            </body>
+        </html>
+        """ % (email, nickname, email, cognito_id_token)
 
-    return {
-        "statusCode": 302,
-        "body": get_nickname_html,
-        "headers": {"Content-Type": "text/html"}
-    }
-
+        return {
+            "statusCode": 302,
+            "body": get_nickname_html,
+            "headers": {"Content-Type": "text/html"}
+        }
+    else:
+        return {
+            "statusCode": 302,
+            "headers": {"Location": "http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s" % (email, nickname, cognito_id_token)}
+        }
 
 def cognito_login(event, context):
-    # TODO: Create a simple page for getting user's nickname
-    # 3. How can I redirect from html to my function with user's input?
     email = event['queryStringParameters']['email']
-    nickname = event['queryStringParameters']['nickname']
-
-    # Sign in to cognito user pool. And get ID token.
-    # If user name is not in user pool, do sign-up first.
-    id_token = cognito.sign_in(email, nickname, "Kakao")
+    nickname = event['queryStringParameters']['nickname']    # Will be same as email
+    id_token = event['queryStringParameters']['token']
 
     # Exchange ID token for temporary credentials.
     temp_credentials = cognito.get_temp_cred(id_token, "Kakao")
