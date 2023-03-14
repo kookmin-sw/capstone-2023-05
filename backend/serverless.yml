@@ -14,7 +14,7 @@ functions:
     handler: functions/handler.hello
     events:
       - http:
-          path: /hello
+          path: src/app/hello
           method: get
 
 plugins:
