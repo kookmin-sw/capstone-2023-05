@@ -7,11 +7,17 @@ provider:
   runtime: python3.9
   region: ap-northeast-2
   profile: ${env:AWS_PROFILE}
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, env:PRIVATE_STAGE}
+
+package:
+  patterns:
+    - "!**"
+    - "src/**"
+    - "requirements.txt"
 
 functions:
   hello:
-    handler: src/app/handler.hello
+    handler: src/lambda/handler.hello
     events:
       - http:
           path: /hello
@@ -19,12 +25,12 @@ functions:
 
 plugins:
   - serverless-python-requirements
-  - serverless-domain-manager
+  # - serverless-domain-manager
 
-custom:
-  customDomain:
-    domainName: ${env:CUSTOM_DOMAIN}
-    stage: ${self:provider.stage}
-    basePath: ${self:provider.stage}
-    certificateName: ${env:CERTIFICATE_NAME}
-    createRoute53Record: true
+# custom:
+#   customDomain:
+#     # domainName: ${env:CUSTOM_DOMAIN}
+#     stage: ${self:provider.stage}
+#     basePath: ${self:provider.stage}
+#     # certificateName: ${env:CERTIFICATE_NAME}
+#     # createRoute53Record: true
