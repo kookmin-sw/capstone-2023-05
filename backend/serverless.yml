@@ -10,13 +10,6 @@ provider:
   stage: ${opt:stage, 'dev'}
 
 functions:
-  hello:
-    handler: functions/handler.hello
-    events:
-      - http:
-          path: /hello
-          method: get
-
   login:
     handler: functions/handler.login
     events:
@@ -57,7 +50,7 @@ functions:
     events:
       - http:
           path: /delete
-          method: put
+          method: delete
 
 plugins:
   - serverless-python-requirements

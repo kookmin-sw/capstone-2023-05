@@ -1,20 +1,8 @@
 import json
 import tqdm
-import requests
 import os
 import auth.kakao as kakao
 import auth.cognito as cognito
-
-
-def hello(event, context):
-    body = {
-        "message": "Go Serverless v3.0! Your function executed successfully!",
-        "input": event,
-    }
-
-    tqdm.tqdm()
-
-    return {"statusCode": 200, "body": json.dumps(body)}
 
 
 def login(event, context):
@@ -62,7 +50,9 @@ def kakao_login(event, context):
 
     # Sign in to cognito user pool. And get ID token.
     # If user email is not in user pool, do sign-up first.
-    cognito_id_token, nickname, is_newbie = cognito.sign_in(email, "Kakao")
+    cognito_auth_info, nickname, is_newbie = cognito.sign_in(email, "Kakao")
+    cognito_id_token = cognito_auth_info['IdToken']
+    cognito_refresh_token = cognito_auth_info['RefreshToken']
 
     # If user is newbie to our service, get nickname from user.
     if is_newbie:
@@ -89,12 +79,12 @@ def kakao_login(event, context):
                         var nickname = document.getElementById("nickname").value;
 
                         // do something with the nickname, like redirect to a new page
-                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&token=%s&newuser=%d";
+                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&token=%s&refresh=%s&newuser=%d";
                     }
                 </script>
             </body>
         </html>
-        """ % (email, nickname, email, cognito_id_token, 1)
+        """ % (email, nickname, email, cognito_id_token, cognito_refresh_token, 1)
 
         return {
             "statusCode": 302,
@@ -114,11 +104,11 @@ def kakao_login(event, context):
                 <li> email: %s</li>
                 <li> nickname: %s</li>
                 <p>
-                    <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&newuser=%d">Continue with your account</a>
+                    <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&refresh=%s&newuser=%d">Continue with your account</a>
                 </p>
             </body>
         </html>
-        """ % (email, nickname, email, nickname, cognito_id_token, 0)
+        """ % (email, nickname, email, nickname, cognito_id_token, cognito_refresh_token, 0)
 
         return {
             "statusCode": 302,
@@ -131,6 +121,7 @@ def cognito_login(event, context):
     email = event['queryStringParameters']['email']
     nickname = event['queryStringParameters']['nickname']
     id_token = event['queryStringParameters']['token']
+    refresh_token = event['queryStringParameters']['refresh']
     is_newbie = event['queryStringParameters']['newuser']
 
     # If user is new, set nickname
@@ -148,24 +139,28 @@ def cognito_login(event, context):
         "body": json.dumps({
             'email': email,
             'nickname': nickname,
+            'cognito-refresh': refresh_token,
             'temp-cred': json.dumps(temp_credentials)
         })
     }
 
 
 # TODO: Question! Do I have to control about tokens?
-# def logout(event, context):
-#     # I need client_id and redirect_uri(maybe /login)
-#     response = requests.get("https://naruhodoo-test.auth.ap-northeast-2.amazoncognito.com/logout?response_type=token&client_id=%s&logout_uri=%s" % (os.getenv("AWS_COGNITO_CLIENT_ID"), "http://localhost:3000/dev/login"))
-#     return {
-#         'statusCode': 400,
-#         'body': str(response.content),
-#         'headers': {'Content-Type': 'text/html'}
-#     }
+def logout(event, context):
+    # I need refresh token from cognito. And refresh token will be in body.
+    # But GET method does not have body! How about header?
+    cognito.block_token(event['queryStringParameters']['refresh-token'])
+
+    # Redirect to login page
+    return {
+        'statusCode': 302,
+        'headers': {'Location': 'http://localhost:3000/dev/login'}
+    }
 
 
-# def delete_account(event, context):
-#     cognito.delete_account(event['queryStringParameters']['email'])
+def delete_account(event, context):
+    cognito.block_token(event['refresh-token'])
+    cognito.delete_account(event['email'])
 
     
 def google_login(event, context):
@@ -176,6 +171,6 @@ def google_login(event, context):
         "statusCode": 200,
         "body": json.dumps({
             "input": event,
-            "message": ""
+            "message": "Login from Google!"
         })
     }
