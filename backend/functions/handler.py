@@ -1,5 +1,7 @@
 import json
 import tqdm
+import requests
+import os
 import auth.kakao as kakao
 import auth.cognito as cognito
 
@@ -13,6 +15,40 @@ def hello(event, context):
     tqdm.tqdm()
 
     return {"statusCode": 200, "body": json.dumps(body)}
+
+
+def login(event, context):
+    login_html = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Naruhodoo Login</title>
+            </head>
+            <body>
+                <h1>Let's start with your account!</h1>
+                <form>
+                    <input type="button" value="Log-in with Kakao" onclick="loginKakao()">
+                    <input type="button" value="Log-in with Google" onclick="loginGoogle()">
+                </form>
+
+                <script>
+                    function loginKakao() {
+                        // do something with the nickname, like redirect to a new page
+                        window.location.href = "https://kauth.kakao.com/authorize?response_type=code&client_id=%s&redirect_uri=%s";
+                    }
+                    function loginGoogle() {
+                        window.location.href = "https://naruhodoo-test.auth.ap-northeast-2.amazoncognito.com/login?response_type=token&client_id=%s&redirect_uri=%s";
+                    }
+                </script>
+            </body>
+        </html>
+        """ % (os.getenv("KAKAO_REST_API_KEY"), "http://localhost:3000/dev/login/kakao", os.getenv("AWS_COGNITO_CLIENT_ID"), "http://localhost:3000/dev/login/google")
+    
+    return {
+            "statusCode": 200,
+            "body": login_html,
+            "headers": {"Content-Type": "text/html"}
+        }
 
 
 def kakao_login(event, context):
@@ -117,17 +153,29 @@ def cognito_login(event, context):
     }
 
 
-def delete_account(event, context):
-    cognito.delete_account(event['queryStringParameters']['email'])
+# TODO: Question! Do I have to control about tokens?
+# def logout(event, context):
+#     # I need client_id and redirect_uri(maybe /login)
+#     response = requests.get("https://naruhodoo-test.auth.ap-northeast-2.amazoncognito.com/logout?response_type=token&client_id=%s&logout_uri=%s" % (os.getenv("AWS_COGNITO_CLIENT_ID"), "http://localhost:3000/dev/login"))
+#     return {
+#         'statusCode': 400,
+#         'body': str(response.content),
+#         'headers': {'Content-Type': 'text/html'}
+#     }
+
+
+# def delete_account(event, context):
+#     cognito.delete_account(event['queryStringParameters']['email'])
 
     
-# def google_login(event, context):
-#     # TODO: How to get ID token? It is on the redirect url, but token is not in queryParameters!
-#     # print(event)
+def google_login(event, context):
+    # TODO: How to get ID token? Access token is on the redirect url, but token is not in queryParameters!
+    # temp_credentials = cognito.get_temp_cred(google_id_token, "Google")
 
-#     # temp_credentials = cognito.get_temp_cred(google_id_token, "Google")
-
-#     return {
-#         "statusCode": 200,
-#         "body": "Hello Google!"
-#     }
+    return {
+        "statusCode": 200,
+        "body": json.dumps({
+            "input": event,
+            "message": ""
+        })
+    }

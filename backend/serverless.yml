@@ -17,6 +17,13 @@ functions:
           path: /hello
           method: get
 
+  login:
+    handler: functions/handler.login
+    events:
+      - http:
+          path: /login
+          method: get
+
   kakao_login:
     handler: functions/handler.kakao_login
     events:
@@ -24,11 +31,25 @@ functions:
           path: /login/kakao
           method: get
 
+  google_login:
+    handler: functions/handler.google_login
+    events:
+      - http:
+          path: login/google
+          method: get
+
   cognito_login:
     handler: functions/handler.cognito_login
     events:
       - http:
           path: /login/cognito
+          method: get
+
+  logout:
+    handler: functions/handler.logout
+    events:
+      - http:
+          path: /logout
           method: get
 
   delete_account:
