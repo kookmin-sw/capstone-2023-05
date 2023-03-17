@@ -31,6 +31,18 @@ functions:
       - http:
           path: /hello
           method: get
+  hello-redis:
+    handler: src/lambda/handler.hello_redis
+    events:
+      - http:
+          path: /hello-redis
+          method: get
+  hello-postgres:
+    handler: src/lambda/handler.hello_postgres
+    events:
+      - http:
+          path: /hello-postgres
+          method: get
 
 custom:
   POSTGRES_HOST:
