@@ -12,10 +12,11 @@ def hello(event):
     return {"statusCode": 200, "body": json.dumps(body)}
 
 
-def create_room(data):
+def hello_redis():
     with RedisContext(**redis_config) as redis:
-        redis.set("test", "test")
-        assert redis.get("test") == "test"
-        redis.delete("test")
-        assert redis.get("test") is None
+        return redis.client_info()
 
+
+def hello_db():
+    with PostgresContext(**db_config) as db:
+        return f"Database {db.info.host} Connected"
