@@ -48,15 +48,15 @@ custom:
   POSTGRES_DB:
     dev: ${ssm:/naruhodoo/dev/postgres/db}
     # prod: ${ssm:/naruhodoo/prod/postgres/db}
-  REDIS_HOST:
-    # dev: ${ssm:/naruhodoo/dev/redis/host}
-    # prod: ${ssm:/naruhodoo/prod/redis/host}
-  REDIS_PORT:
-    # dev: ${ssm:/naruhodoo/dev/redis/port}
-    # prod: ${ssm:/naruhodoo/prod/redis/port}
-  REDIS_DB:
-    # dev: ${ssm:/naruhodoo/dev/redis/db}
-    # prod: ${ssm:/naruhodoo/prod/redis/db}
+  # REDIS_HOST:
+  #   dev: ${ssm:/naruhodoo/dev/redis/host}
+  #   prod: ${ssm:/naruhodoo/prod/redis/host}
+  # REDIS_PORT:
+  #   dev: ${ssm:/naruhodoo/dev/redis/port}
+  #   prod: ${ssm:/naruhodoo/prod/redis/port}
+  # REDIS_DB:
+  #   dev: ${ssm:/naruhodoo/dev/redis/db}
+  #   prod: ${ssm:/naruhodoo/prod/redis/db}
   customDomain:
     domainName: ${env:CUSTOM_DOMAIN}
     stage: ${self:provider.stage}
