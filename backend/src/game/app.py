@@ -1,7 +1,8 @@
 import json
 import tqdm
 
-from src.utility.redis import RedisHelper
+from src.utility.context import RedisContext
+from src.game.config import redis_config
 
 
 def hello(event):
@@ -14,5 +15,9 @@ def hello(event):
 
 
 def create_room(data):
-    with RedisHelper() as redis:
+    with RedisContext(**redis_config) as redis:
         redis.set("test", "test")
+        assert redis.get("test") == "test"
+        redis.delete("test")
+        assert redis.get("test") is None
+
