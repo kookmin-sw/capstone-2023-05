@@ -5,6 +5,7 @@ hiredis==2.2.2
 iniconfig==2.0.0
 packaging==23.0
 pluggy==1.0.0
+psycopg2-binary==2.9.5
 pytest==7.2.2
 redis==4.5.1
 tomli==2.0.1
