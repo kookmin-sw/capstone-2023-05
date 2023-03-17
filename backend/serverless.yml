@@ -1,30 +1,67 @@
 service: serverless-naruhodoo
 
-frameworkVersion: '3'
+frameworkVersion: "3"
 
 provider:
-  name: aws
-  runtime: python3.9
-  region: ap-northeast-2
-  profile: ${env:AWS_PROFILE}
-  stage: ${opt:stage, 'dev'}
+    name: aws
+    runtime: python3.9
+    region: ap-northeast-2
+    profile: ${env:AWS_PROFILE}
+    stage: ${opt:stage, 'dev'}
 
 functions:
-  hello:
-    handler: functions/handler.hello
-    events:
-      - http:
-          path: /hello
-          method: get
+    hello:
+        handler: src/app/handler.hello
+        vpc:
+            securityGroupIds:
+                - sg-02e066f4350bce334
+            subnetIds:
+                - subnet-0f46e1b2c0aebbdc0
+                - subnet-0e045802490c324be
+                - subnet-0f47f695517a3b612
+                - subnet-0f6c310edc4506034
+        events:
+            - http:
+                  path: /hello
+                  method: get
+
+    get-room:
+        handler: src/app/room/get-room.get_room
+        vpc:
+            securityGroupIds:
+                - sg-02e066f4350bce334
+            subnetIds:
+                - subnet-0f46e1b2c0aebbdc0
+                - subnet-0e045802490c324be
+                - subnet-0f47f695517a3b612
+                - subnet-0f6c310edc4506034
+        events:
+            - http:
+                  path: /room
+                  method: get
+    create-room:
+        handler: src/app/room/create-room.create_room
+        vpc:
+            securityGroupIds:
+                - sg-02e066f4350bce334
+            subnetIds:
+                - subnet-0f46e1b2c0aebbdc0
+                - subnet-0e045802490c324be
+                - subnet-0f47f695517a3b612
+                - subnet-0f6c310edc4506034
+        events:
+            - http:
+                  path: /room
+                  method: post
 
 plugins:
-  - serverless-python-requirements
-  - serverless-domain-manager
+    - serverless-python-requirements
+    - serverless-domain-manager
 
 custom:
-  customDomain:
-    domainName: ${env:CUSTOM_DOMAIN}
-    stage: ${self:provider.stage}
-    basePath: ${self:provider.stage}
-    certificateName: ${env:CERTIFICATE_NAME}
-    createRoute53Record: true
+    customDomain:
+        domainName: ${env:CUSTOM_DOMAIN}
+        stage: ${self:provider.stage}
+        basePath: ${self:provider.stage}
+        certificateName: ${env:CERTIFICATE_NAME}
+        createRoute53Record: true

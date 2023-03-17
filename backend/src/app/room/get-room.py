@@ -1,9 +1,8 @@
-import boto3
 import json
 import psycopg2
 
 
-def hello(event, context):
+def get_room(event, context):
 
     ENDPOINT = "naruhodoo-db.cldpkmn0dcie.ap-northeast-2.rds.amazonaws.com"
     PORT = "5432"
@@ -13,18 +12,9 @@ def hello(event, context):
     PASSWORD = "password"
 
     try:
-
         conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
                                 user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
         cur = conn.cursor()
-        cur.execute("""CREATE TABLE room(
-                                        id SERIAL PRIMARY KEY,
-                                        name text,
-                                        topic text                                        
-                        )""")
-        # cur.execute("INSERT INTO room VALUES (DEFAULT)")
-
-        conn.commit()
 
         cur.execute("""select * from room""")
         query_results = cur.fetchall()
