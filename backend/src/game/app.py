@@ -1,12 +1,10 @@
 import json
-import tqdm
 
-from src.utility.context import RedisContext
-from src.game.config import redis_config
+from src.utility.context import PostgresContext, RedisContext
+from src.game.config import redis_config, db_config
 
 
 def hello(event):
-    tqdm.tqdm()
     body = {
         "message": "Hello World!",
         "event": event,
