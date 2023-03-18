@@ -1,5 +1,4 @@
 import json
-import tqdm
 import os
 import auth.kakao as kakao
 import auth.cognito as cognito
@@ -50,9 +49,7 @@ def kakao_login(event, context):
 
     # Sign in to cognito user pool. And get ID token.
     # If user email is not in user pool, do sign-up first.
-    cognito_auth_info, nickname, is_newbie = cognito.sign_in(email, "Kakao")
-    cognito_id_token = cognito_auth_info['IdToken']
-    cognito_refresh_token = cognito_auth_info['RefreshToken']
+    nickname, is_newbie = cognito.sign_in(email, "Kakao")
 
     # If user is newbie to our service, get nickname from user.
     if is_newbie:
@@ -79,12 +76,12 @@ def kakao_login(event, context):
                         var nickname = document.getElementById("nickname").value;
 
                         // do something with the nickname, like redirect to a new page
-                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&token=%s&refresh=%s&newuser=%d";
+                        window.location.href = "http://localhost:3000/dev/login/cognito?email=%s&nickname=" + nickname + "&newuser=%d";
                     }
                 </script>
             </body>
         </html>
-        """ % (email, nickname, email, cognito_id_token, cognito_refresh_token, 1)
+        """ % (email, nickname, email, 1)
 
         return {
             "statusCode": 302,
@@ -104,11 +101,11 @@ def kakao_login(event, context):
                 <li> email: %s</li>
                 <li> nickname: %s</li>
                 <p>
-                    <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&token=%s&refresh=%s&newuser=%d">Continue with your account</a>
+                    <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&newuser=%d">Continue with your account</a>
                 </p>
             </body>
         </html>
-        """ % (email, nickname, email, nickname, cognito_id_token, cognito_refresh_token, 0)
+        """ % (email, nickname, email, nickname, 0)
 
         return {
             "statusCode": 302,
@@ -120,16 +117,16 @@ def kakao_login(event, context):
 def cognito_login(event, context):
     email = event['queryStringParameters']['email']
     nickname = event['queryStringParameters']['nickname']
-    id_token = event['queryStringParameters']['token']
-    refresh_token = event['queryStringParameters']['refresh']
     is_newbie = event['queryStringParameters']['newuser']
 
     # If user is new, set nickname
     if is_newbie:
         cognito.set_nickname(email, nickname)
 
+    cognito_auth = cognito.get_token(email)
+
     # Exchange ID token for temporary credentials.
-    temp_credentials = cognito.get_temp_cred(id_token, "Kakao")
+    temp_credentials = cognito.get_temp_cred(cognito_auth['IdToken'], "Kakao")
     expire_time = temp_credentials['Expiration']
     temp_credentials['Expiration'] = expire_time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -139,7 +136,7 @@ def cognito_login(event, context):
         "body": json.dumps({
             'email': email,
             'nickname': nickname,
-            'cognito-refresh': refresh_token,
+            'cognito-authentication': cognito_auth,
             'temp-cred': json.dumps(temp_credentials)
         })
     }
@@ -148,7 +145,8 @@ def cognito_login(event, context):
 # TODO: Question! Do I have to control about tokens?
 def logout(event, context):
     # I need refresh token from cognito. And refresh token will be in body.
-    cognito.block_token(event['refresh-token'], event['credentials'])
+    event_body = json.dumps(event['body'])
+    cognito.block_token(event_body['refresh-token'], event_body['credentials'])
 
     # Redirect to login page
     return {
@@ -159,7 +157,12 @@ def logout(event, context):
 
 def delete_account(event, context):
     # Delete user from cognito user pool
-    cognito.delete_account(event['email'])
+    cognito.delete_account(json.loads(event['body'])['email'])
+
+    return {
+        'statusCode': 200,
+        'body': "Completely deleted your account from AWS Cognito."
+    }
 
     
 def google_login(event, context):
