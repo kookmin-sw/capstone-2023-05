@@ -1,6 +1,6 @@
 import boto3
 import os
-import json
+from datetime import datetime
 
 
 def set_nickname(user_name: str, nickname: str) -> None:
@@ -140,7 +140,7 @@ def get_temp_cred(id_token: str, identity_provider: str) -> dict:
     return response['Credentials']
 
 
-def block_token(token: str) -> dict:
+def block_token(access_token: str, temp_creds: dict) -> dict:
     """
     Revoke a refresh token issued by cognito.\n
     When refresh token is revoked, all access tokens that were previously issued by this refresh token become invalid.\n
@@ -148,18 +148,32 @@ def block_token(token: str) -> dict:
     """
     response = idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     # Revoke access token
-    idp_client.revoke_token(
-        Token=token,
+    response = idp_client.revoke_token(
+        Token=access_token,
         ClientId=os.getenv("AWS_COGNITO_CLIENT_ID")
     )
 
     # Expiring session token
-    
-
-    return response
+    temp_creds['Expiration'] = datetime.now()
 
 
 if __name__ == "__main__":
-    response = block_token("eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ.OgCcdYkTwDxIgSjBiyN4YUSp-ycGHEunT4VUhfYCP6nf86jW_7pGAwgPhhE1rT5mxfzzN06PJ2fXns3Qsf5Zy2RN0SVMdXyNZpLosJKFkmhvZmsM3fLvbZsoSoILgCxgLQdd6adoIyQ_VOjO0Ga2LfajJH35aw3aheLrBZTMx9tZByZEuAuleI499bZIzS7-2ZOmZdRvG5Yjiu1jAZaWIuoOSutSKgNK6e238n1hz-aiwQTPXwfLsAuu0j9D4ZPMvEaHDnTm_Hj4H-Duzu0c3OYR8SLIfCnxBJj49W5U-Qd7mW03QEtau-FYLxmDwUtAIlBVwTm5oO02-Ta1l-4wFg.OQkhJN8K0f63gWON.6xIn60jBNMXgALKrPwI9B29yC83Wi4S3iiuuVlATbFhJl7CIQmPVlFZOesKkVVK6iarEHeAkS8iMurSENU1Al9qRsZfXGc31iNjNWUGHBmg1ut-vAcjz20_VrCkCK3-P7eFfz7L4mNtfiVWLorQ7uK0aYKSujw4O6ONSSHc0PpbuVRoJsfFSwbzjtyfZEEmkK7jOIN8Jad6s508LWhcr-GSVDqYZIIX-10RDIQAyemHLVkbRtmUCaqBovGpY32y7czKRhixACcJ2izQZ5vdc-FgiYBP_P9mhERZhyh6XjTM8jxBYKvHmjNYev9M5OHULQWSaMdI7eQ-FJ7SX8rjIrdhmwtw-ZxcSMVej_AMDKLFcWCGi1kKIl7TNbBEE5mD482NTj9LhKlPkxc1HvVisIwSIiOg3rDQskw_s9OPY44qXuX4w6GeCK1hOjxE08clPWyUbT1w0-WgQyR0YBOJgAT3THFh87x-dLz7DfYVbUuyT7inOSUBC5PUNeDyvrx-108Zu3BGFOWcYcMRjxsmX-LGw_rKNRJLSvYUchnq0AgJFz7bjI_yXZKy0OVx02RZj3P3FL89XuRPm09fTS87aUmncH-oF4eyAYaR0M922fnvylzvFlKauOYJFDJqWqisjd1pi39T1YJA_cdku06nzgbc4ZIWS1dyIzk5mZqcqCnH4wD9axPYSmnOQQIjV5WcGkeTvQApNxfhi9T4lbOnaTfdPnolW9kAMglv7OZEzxd2NPR_F941uaZJznrdB0WEvZEQQazoyf2yoLGhhj8zNCBPC9WdR5geQsIMmIlDbR2MMfjYbtvTfoC4m7JP3EfEPOrrB5jIB7Q2J7XuDmQCifB3OVV17KjsyC68OifXK-AQiGrcz9mQcsfDzVYZYJ2Btvpj8FVbJd6CQM-Hw2gzQQ0iyz-Hg3zkaLDOjz9w7CZ-GJjUan6uKyzLVpqsyJNrJBH4yQbx12h5du1WaCz1WjP1hSslkkzjpF1OV4ZMFv3W-fh2VGRM3m4NtTymbLwTDKvsLD76x2hhSDX8Z8NbSfXXX5y6EL5b8FHBcpDC3UTYZzbahv1oi8luWPSh6FWie1A9dYJc_Ro-n1EJf9IbfUuRqtKX6Gdk2uqcnO1bJ3bo9bwNmUkgmkBiOs6KIia0Vzvy5uSJVktvIbiFtnm4Yv35t7vaBkcBOYZWKxoUZodK64s7ELX1jJ5eiTvnCoKucdEGqrj4OM8amLCKtyWayj68koKlCbop7Welljs3xoThUV6LPWzAQDWnb1Gwa3UrMj6bSfSRVTZa3rlnl1DYVknTH-_sdVhDAMyCBX7bj8CkOcnauRDNedDa4.TuOykOaFSJW49y1yVcPxxg")
-    
+    my_refresh_token = "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ.OgCcdYkTwDxIgSjBiyN4YUSp-ycGHEunT4VUhfYCP6nf86jW_7pGAwgPhhE1rT5mxfzzN06PJ2fXns3Qsf5Zy2RN0SVMdXyNZpLosJKFkmhvZmsM3fLvbZsoSoILgCxgLQdd6adoIyQ_VOjO0Ga2LfajJH35aw3aheLrBZTMx9tZByZEuAuleI499bZIzS7-2ZOmZdRvG5Yjiu1jAZaWIuoOSutSKgNK6e238n1hz-aiwQTPXwfLsAuu0j9D4ZPMvEaHDnTm_Hj4H-Duzu0c3OYR8SLIfCnxBJj49W5U-Qd7mW03QEtau-FYLxmDwUtAIlBVwTm5oO02-Ta1l-4wFg.OQkhJN8K0f63gWON.6xIn60jBNMXgALKrPwI9B29yC83Wi4S3iiuuVlATbFhJl7CIQmPVlFZOesKkVVK6iarEHeAkS8iMurSENU1Al9qRsZfXGc31iNjNWUGHBmg1ut-vAcjz20_VrCkCK3-P7eFfz7L4mNtfiVWLorQ7uK0aYKSujw4O6ONSSHc0PpbuVRoJsfFSwbzjtyfZEEmkK7jOIN8Jad6s508LWhcr-GSVDqYZIIX-10RDIQAyemHLVkbRtmUCaqBovGpY32y7czKRhixACcJ2izQZ5vdc-FgiYBP_P9mhERZhyh6XjTM8jxBYKvHmjNYev9M5OHULQWSaMdI7eQ-FJ7SX8rjIrdhmwtw-ZxcSMVej_AMDKLFcWCGi1kKIl7TNbBEE5mD482NTj9LhKlPkxc1HvVisIwSIiOg3rDQskw_s9OPY44qXuX4w6GeCK1hOjxE08clPWyUbT1w0-WgQyR0YBOJgAT3THFh87x-dLz7DfYVbUuyT7inOSUBC5PUNeDyvrx-108Zu3BGFOWcYcMRjxsmX-LGw_rKNRJLSvYUchnq0AgJFz7bjI_yXZKy0OVx02RZj3P3FL89XuRPm09fTS87aUmncH-oF4eyAYaR0M922fnvylzvFlKauOYJFDJqWqisjd1pi39T1YJA_cdku06nzgbc4ZIWS1dyIzk5mZqcqCnH4wD9axPYSmnOQQIjV5WcGkeTvQApNxfhi9T4lbOnaTfdPnolW9kAMglv7OZEzxd2NPR_F941uaZJznrdB0WEvZEQQazoyf2yoLGhhj8zNCBPC9WdR5geQsIMmIlDbR2MMfjYbtvTfoC4m7JP3EfEPOrrB5jIB7Q2J7XuDmQCifB3OVV17KjsyC68OifXK-AQiGrcz9mQcsfDzVYZYJ2Btvpj8FVbJd6CQM-Hw2gzQQ0iyz-Hg3zkaLDOjz9w7CZ-GJjUan6uKyzLVpqsyJNrJBH4yQbx12h5du1WaCz1WjP1hSslkkzjpF1OV4ZMFv3W-fh2VGRM3m4NtTymbLwTDKvsLD76x2hhSDX8Z8NbSfXXX5y6EL5b8FHBcpDC3UTYZzbahv1oi8luWPSh6FWie1A9dYJc_Ro-n1EJf9IbfUuRqtKX6Gdk2uqcnO1bJ3bo9bwNmUkgmkBiOs6KIia0Vzvy5uSJVktvIbiFtnm4Yv35t7vaBkcBOYZWKxoUZodK64s7ELX1jJ5eiTvnCoKucdEGqrj4OM8amLCKtyWayj68koKlCbop7Welljs3xoThUV6LPWzAQDWnb1Gwa3UrMj6bSfSRVTZa3rlnl1DYVknTH-_sdVhDAMyCBX7bj8CkOcnauRDNedDa4.TuOykOaFSJW49y1yVcPxxg"
+    my_temp_creds = {
+        "AccessKeyId": "ASIAV26RZ3DHOU3AAYTP",
+        "SecretKey": "dj2Bxwu/z3mBULn5ok0+8pEegNcMXc5LK2v25sts",
+        "SessionToken": "IQoJb3JpZ2luX2VjEHkaDmFwLW5vcnRoZWFzdC0yIkgwRgIhAJ2NI9otrbxl+Q4X8UXMHR4l/U1njQMAyazqVSq+afbDAiEAxU98DUWG5871kkQ7CbRAepIooiIfvw++SPi/f0XZFTAq4gQIQhAAGgw0MDE0ODI1Njk5MzQiDCWQH/ko6sox6lzFMyq/BMQ/4RXNsC/lImGX5NW70Cpp5dWF4AxvltVUipxE6aqlsraxH12HTm16nx+cNVgGesr/MHIAJ4n8d14c4ESVeE2r8uRg70cstdotLClZoEKsh18FiC4wurDLFq/FuHIgwyc5PL1jcJkTAytRd9ZLvY6rXiueNfzqdpzWLh5sW8jhBt4bjkNAyQOP9dRmt9h/XMapVUHWO9U8bOkf5b6Jg19EcrFtFh5np5dZc9yQEg8Zs9o7o1aGbmObmvFeUK4IL3bmgrbbQUnFukxsq20sdpibgKxqonoOgz66fKNDGiePkwB56kuRunTX0VssNevJ8mCmuT9EL6gvRpQuoVBO+FgexJBVRqIGxokJJTfN+2uEZYNuLsAx9ZMUyveEQxl42wO4FyqAWv4nTOiJq4HyoQFSTULtIcIQO2muLf4I6wfcQzFI4qdVvk181B5L3gTL9LNDi/9HrFT5QLJJqt0gNaxceF9YXh9jYn7ABhpqJDOBb/nBdTRIhTVvz2CJoDX9Qc/+KfynlBZbLT1Y3L8Opgy4bbkBY9u273r50UnqsMTT5HfFnG1rWtWeolaEJjlYZ05t9WhHaBiTEtJaxkryfNppsfTX9tL9F9aQV0MXfelQA+/fWGduWgmo1A4WqPP/EXH2BrUBgUGhMOjMhu2GR+gKw4ePTO7lq0LRp5nQKiIpydPqIe2ZRAoIGL1s9OLSw34IP00A3DrMwEMYSIopI8oLcCgGt8ID9gR4BFwiRysj92+BIXKG9Gp826KB7GrqML/11aAGOoQCvlSMwY8A0Yh1v027w1pS/4kDRMPp8Uf73Y9qHZRRBgIWOXGTxHyjy5kVmiMWfQkvmWv8MHgSR+W+n+k9zjShi8Hqm9kp4O8hUG+3E6uTmP3IOCnMSGspbezYbYqjRXGMxeYN1ne6RChRzHVbsyPq6Hqtw9KLUIp/AXvSmbZllm4m5aZKObHaZCOGJOAeC5lob1PRaTmO3jcpBKjxzFVd0GUrcNRiF5mYBMW7yO1oUIwpvZT152/0s3aXm7qy8EIq3M+0/wbv1ux7ldqu7UwxvC73yjJ4hFkAMve6oezFQ7H8+BqJsTRFu1deqnWKpDUtFlYybFyXa3tbdflNel/P6u3cOOM=",
+        "Expiration": "2023-03-18 18:47:59"
+    }
+    response = block_token(my_refresh_token, my_temp_creds)
+    test_client = boto3.client('cognito-idp')
+    test_client.set_user_settings(
+        AccessToken=my_refresh_token,
+        MFAOptions=[
+            {
+                'DeliveryMedium': 'SMS',
+                'AttributeName': 'phone_number'
+            }
+        ]
+    )
     
