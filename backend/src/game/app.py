@@ -4,12 +4,8 @@ from src.utility.context import PostgresContext, RedisContext
 from src.game.config import redis_config, db_config
 
 
-def hello(event):
-    body = {
-        "message": "Hello World!",
-        "event": event,
-    }
-    return {"statusCode": 200, "body": json.dumps(body)}
+def hello():
+    return "Hello World!"
 
 
 def hello_redis():

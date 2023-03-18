@@ -1,4 +1,3 @@
-import os
 import psycopg2
 import pytest
 from redis import Redis
@@ -29,10 +28,6 @@ def test_redis_get_client(redis):
     my_client = redis.client_info()
     assert my_client['id'] is not None, "Redis Connection Failed"
 
+
 def test_psycopg2_connection(db):
     assert db is not None, "Psycopg2 Connection Failed"
-
-
-
-if __name__ == "__main__":
-    print(db_config)
