@@ -5,18 +5,27 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: python3.9
+  architecture: x86_64
   region: ap-northeast-2
   profile: ${env:AWS_PROFILE}
   stage: ${opt:stage, env:PRIVATE_STAGE}
+  vpc:
+    securityGroupIds:
+      - ${env:AWS_SECURITY_GROUP}
+    subnetIds:
+      - ${env:AWS_SUBNET1}
+      - ${env:AWS_SUBNET2}
+      - ${env:AWS_SUBNET3}
+      - ${env:AWS_SUBNET4}
   environment:
-    POSTGRES_HOST: ${self.custom.POSTGRES_HOST.${self.provider.stage}}
-    POSTGRES_PORT: ${self.custom.POSTGRES_PORT.${self.provider.stage}}
-    POSTGRES_USER: ${self.custom.POSTGRES_USER.${self.provider.stage}}
-    POSTGRES_PASSWORD: ${self.custom.POSTGRES_PASSWORD.${self.provider.stage}}
-    POSTGRES_DB: ${self.custom.POSTGRES_DB.${self.provider.stage}}
-    REDIS_HOST: ${self.custom.REDIS_HOST.${self.provider.stage}}
-    REDIS_PORT: ${self.custom.REDIS_PORT.${self.provider.stage}}
-    REDIS_DB: ${self.custom.REDIS_DB.${self.provider.stage}}
+    POSTGRES_HOST: ${self:custom.POSTGRES_HOST}
+    POSTGRES_PORT: ${self:custom.POSTGRES_PORT}
+    POSTGRES_USER: ${self:custom.POSTGRES_USER}
+    POSTGRES_PASSWORD: ${self:custom.POSTGRES_PASSWORD}
+    POSTGRES_DB: ${self:custom.POSTGRES_DB}
+    REDIS_HOST: ${self:custom.REDIS_HOST}
+    REDIS_PORT: ${self:custom.REDIS_PORT}
+    REDIS_DB: ${self:custom.REDIS_DB}
 
 package:
   patterns:
@@ -30,6 +39,12 @@ functions:
     events:
       - http:
           path: /hello
+          method: get
+  platform:
+    handler: src/lambda/handler.get_platform
+    events:
+      - http:
+          path: /platform
           method: get
   hello-redis:
     handler: src/lambda/handler.hello_redis
@@ -46,36 +61,32 @@ functions:
 
 custom:
   POSTGRES_HOST:
-    dev: ${ssm:/naruhodoo/dev/postgres/host}
-    # prod: ${ssm:/naruhodoo/prod/postgres/host}
+    ${ssm:/naruhodoo/${self:provider.stage}/postgres/host}
   POSTGRES_PORT:
-    dev: ${ssm:/naruhodoo/dev/postgres/port}
-    # prod: ${ssm:/naruhodoo/prod/postgres/port}
+    ${ssm:/naruhodoo/${self:provider.stage}/postgres/port}
   POSTGRES_USER:
-    dev: ${ssm:/naruhodoo/dev/postgres/user}
-    # prod: ${ssm:/naruhodoo/prod/postgres/user}
+    ${ssm:/naruhodoo/${self:provider.stage}/postgres/user}
   POSTGRES_PASSWORD:
-    dev: ${ssm:/naruhodoo/dev/postgres/password}
-    # prod: ${ssm:/naruhodoo/prod/postgres/password}
+    ${ssm:/naruhodoo/${self:provider.stage}/postgres/password}
   POSTGRES_DB:
-    dev: ${ssm:/naruhodoo/dev/postgres/db}
-    # prod: ${ssm:/naruhodoo/prod/postgres/db}
-  # REDIS_HOST:
-  #   dev: ${ssm:/naruhodoo/dev/redis/host}
-  #   prod: ${ssm:/naruhodoo/prod/redis/host}
-  # REDIS_PORT:
-  #   dev: ${ssm:/naruhodoo/dev/redis/port}
-  #   prod: ${ssm:/naruhodoo/prod/redis/port}
-  # REDIS_DB:
-  #   dev: ${ssm:/naruhodoo/dev/redis/db}
-  #   prod: ${ssm:/naruhodoo/prod/redis/db}
+    ${ssm:/naruhodoo/${self:provider.stage}/postgres/db}
+  REDIS_HOST:
+    ${ssm:/naruhodoo/${self:provider.stage}/redis/host}
+  REDIS_PORT:
+    ${ssm:/naruhodoo/${self:provider.stage}/redis/port}
+  REDIS_DB:
+    ${ssm:/naruhodoo/${self:provider.stage}/redis/db}
+
   customDomain:
     domainName: ${env:CUSTOM_DOMAIN}
     stage: ${self:provider.stage}
     basePath: ${self:provider.stage}
     certificateName: ${env:CERTIFICATE_NAME}
     createRoute53Record: true
+  pythonRequirements:
+    dockerizePip: true  # Use docker to install dependencies for non-linux environments
 
 plugins:
   - serverless-python-requirements
   - serverless-domain-manager
+  - serverless-offline
