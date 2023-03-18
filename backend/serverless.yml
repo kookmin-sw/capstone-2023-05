@@ -11,21 +11,21 @@ provider:
   stage: ${opt:stage, env:PRIVATE_STAGE}
   vpc:
     securityGroupIds:
-      - ${env:AWS_SECURITY_GROUP}
+      - ${ssm:/naruhodoo/aws/security_group}
     subnetIds:
-      - ${env:AWS_SUBNET1}
-      - ${env:AWS_SUBNET2}
-      - ${env:AWS_SUBNET3}
-      - ${env:AWS_SUBNET4}
+      - ${ssm:/naruhodoo/aws/subnet1}
+      - ${ssm:/naruhodoo/aws/subnet2}
+      - ${ssm:/naruhodoo/aws/subnet3}
+      - ${ssm:/naruhodoo/aws/subnet4}
   environment:
-    POSTGRES_HOST: ${self:custom.POSTGRES_HOST}
-    POSTGRES_PORT: ${self:custom.POSTGRES_PORT}
-    POSTGRES_USER: ${self:custom.POSTGRES_USER}
-    POSTGRES_PASSWORD: ${self:custom.POSTGRES_PASSWORD}
-    POSTGRES_DB: ${self:custom.POSTGRES_DB}
-    REDIS_HOST: ${self:custom.REDIS_HOST}
-    REDIS_PORT: ${self:custom.REDIS_PORT}
-    REDIS_DB: ${self:custom.REDIS_DB}
+    POSTGRES_HOST: ${ssm:/naruhodoo/${self:provider.stage}/postgres/host, env:POSTGRES_HOST}
+    POSTGRES_PORT: ${ssm:/naruhodoo/${self:provider.stage}/postgres/port, env:POSTGRES_PORT}
+    POSTGRES_USER: ${ssm:/naruhodoo/${self:provider.stage}/postgres/user, env:POSTGRES_USER}
+    POSTGRES_PASSWORD: ${ssm:/naruhodoo/${self:provider.stage}/postgres/password, env:POSTGRES_PASSWORD}
+    POSTGRES_DB: ${ssm:/naruhodoo/${self:provider.stage}/postgres/db, env:POSTGRES_DB}
+    REDIS_HOST: ${ssm:/naruhodoo/${self:provider.stage}/redis/host, env:REDIS_HOST}
+    REDIS_PORT: ${ssm:/naruhodoo/${self:provider.stage}/redis/port, env:REDIS_PORT}
+    REDIS_DB: ${ssm:/naruhodoo/${self:provider.stage}/redis/db, env:REDIS_DB}
 
 package:
   patterns:
@@ -52,31 +52,14 @@ functions:
       - http:
           path: /hello-redis
           method: get
-  hello-postgres:
-    handler: src/lambda/handler.hello_postgres
+  hello-db:
+    handler: src/lambda/handler.hello_db
     events:
       - http:
-          path: /hello-postgres
+          path: /hello-db
           method: get
 
 custom:
-  POSTGRES_HOST:
-    ${ssm:/naruhodoo/${self:provider.stage}/postgres/host}
-  POSTGRES_PORT:
-    ${ssm:/naruhodoo/${self:provider.stage}/postgres/port}
-  POSTGRES_USER:
-    ${ssm:/naruhodoo/${self:provider.stage}/postgres/user}
-  POSTGRES_PASSWORD:
-    ${ssm:/naruhodoo/${self:provider.stage}/postgres/password}
-  POSTGRES_DB:
-    ${ssm:/naruhodoo/${self:provider.stage}/postgres/db}
-  REDIS_HOST:
-    ${ssm:/naruhodoo/${self:provider.stage}/redis/host}
-  REDIS_PORT:
-    ${ssm:/naruhodoo/${self:provider.stage}/redis/port}
-  REDIS_DB:
-    ${ssm:/naruhodoo/${self:provider.stage}/redis/db}
-
   customDomain:
     domainName: ${env:CUSTOM_DOMAIN}
     stage: ${self:provider.stage}
