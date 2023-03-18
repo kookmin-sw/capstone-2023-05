@@ -29,9 +29,8 @@ provider:
 
 package:
   patterns:
-    - "!**"
-    - "src/**"
-    - "requirements.txt"
+    - "!volumes"
+    - "!node_modules"
 
 functions:
   hello:
