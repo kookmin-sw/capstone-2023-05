@@ -43,7 +43,7 @@ functions:
     events:
       - http:
           path: /logout
-          method: get
+          method: patch
 
   delete_account:
     handler: functions/handler.delete_account

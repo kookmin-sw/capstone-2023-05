@@ -148,8 +148,7 @@ def cognito_login(event, context):
 # TODO: Question! Do I have to control about tokens?
 def logout(event, context):
     # I need refresh token from cognito. And refresh token will be in body.
-    # But GET method does not have body! How about header?
-    cognito.block_token(event['queryStringParameters']['refresh-token'])
+    cognito.block_token(event['refresh-token'], event['credentials'])
 
     # Redirect to login page
     return {
@@ -159,7 +158,7 @@ def logout(event, context):
 
 
 def delete_account(event, context):
-    cognito.block_token(event['refresh-token'])
+    # Delete user from cognito user pool
     cognito.delete_account(event['email'])
 
     
