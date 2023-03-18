@@ -49,7 +49,7 @@ functions:
     handler: functions/handler.delete_account
     events:
       - http:
-          path: /delete
+          path: /profile
           method: delete
 
 plugins:
