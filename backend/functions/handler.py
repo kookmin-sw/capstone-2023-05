@@ -6,6 +6,11 @@ import auth.cognito as cognito
 
 
 def login(event, context):
+    """
+    Showing login page.\n
+    :return: Response for getting login html
+    """
+
     login_html = """
         <!DOCTYPE html>
         <html>
@@ -44,12 +49,12 @@ def kakao_login(event, context):
     Trying to login through Kakao account\n
     :return: Response for Kakao login.
     """
+
     # Get authorized code from Kakao
     access_code = event['queryStringParameters']['code']
     email = kakao.get_email(access_code)
 
     # Sign in to cognito user pool. And get ID token.
-    # If user email is not in user pool, do sign-up first.
     nickname, is_newbie = cognito.sign_in(email, "Kakao")
 
     # If user is newbie to our service, get nickname from user.
@@ -103,11 +108,17 @@ def kakao_login(event, context):
     
 
 def cognito_login(event, context):
+    """
+    Trying to get access token from aws cognito.\n
+    And getting temporary aws credentials.\n
+    :return: Response for getting credentials.
+    """
+
     email = event['queryStringParameters']['email']
     nickname = event['queryStringParameters']['nickname']
     is_newbie = event['queryStringParameters']['newuser']
 
-    # If user is new, set nickname
+    # If user is newbie, set nickname
     if is_newbie:
         cognito.set_nickname(email, nickname)
 
@@ -131,7 +142,11 @@ def cognito_login(event, context):
 
 
 def logout(event, context):
-    # sign-out user
+    """
+    Trying to sign out via cognito.\n
+    :return: Redirect to login html
+    """
+
     access_token = event['headers']['Authorization']
     cognito.sign_out(access_token)
 
@@ -143,7 +158,11 @@ def logout(event, context):
 
 
 def delete_account(event, context):
-    # Delete user from cognito user pool
+    """
+    Trying to delete user in cognito user pool.\n
+    :return: Response for deleting user.
+    """
+    
     cognito.delete_account(json.loads(event['body'])['email'])
 
     return {

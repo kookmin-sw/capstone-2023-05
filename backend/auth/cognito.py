@@ -10,6 +10,7 @@ def set_nickname(user_name: str, nickname: str) -> None:
     :param user_name: Username(This should be same as email)
     :param nickname: A nickname you want to set
     """
+
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     idp_client.admin_update_user_attributes(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
@@ -23,21 +24,21 @@ def set_nickname(user_name: str, nickname: str) -> None:
     )
 
 
-def sign_in(email: str, identity_provider: str=None) -> tuple[dict, str, bool]:
+def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
     """
     Trying to sign-in with kakao account.\n
     If user didn't register in cognito. Do sign-up\n
     :param email: Kakao email
     :return: nickname and flag for checking newbie
     """
-    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
 
-    # Checking if user already in cognito user pool or not.
-    # If not exist, do sign-up
+    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     response = idp_client.list_users(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID")
     )
 
+    # Checking if user already in cognito user pool or not.
+    # If not exist, do sign-up
     new_created = False
     nickname = "TempNickname"
     for user in response['Users']:
@@ -69,6 +70,7 @@ def sign_up(_client, email: str):
     :param email: User's Kakao email
     :param nickname: User's Kakao nickname
     """
+
     # Create user to cognito user pool
     _client.admin_create_user(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
@@ -92,11 +94,21 @@ def sign_up(_client, email: str):
 
 
 def sign_out(access_token: str):
+    """
+    Trying to sign-out via cognito.\n
+    :param access_token: Access token you got from aws cognito\n
+    """
+
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     idp_client.global_sign_out(AccessToken=access_token)
 
 
 def delete_account(name: str):
+    """
+    Trying to delete user in cognito user pool.\n
+    :param name: The email you registered.
+    """
+    
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     idp_client.admin_delete_user(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
@@ -110,6 +122,7 @@ def get_token(email: str) -> dict:
     :param email: User's email
     :return: Result for authentication
     """
+
     idp_client = boto3.client('cognito-idp')
     # Do initiate_auth to get access token
     response = idp_client.initiate_auth(
@@ -134,7 +147,6 @@ def get_temp_cred(id_token: str, identity_provider: str) -> dict:
     # Get Identity ID to get temp credentials.
     idp_client = boto3.client('cognito-identity')
     identity_id = idp_client.get_id(IdentityPoolId=os.getenv('AWS_COGNITO_IDENTITY_POOL_ID'))['IdentityId']
-    # print(identity_id)
 
     # Get temp credentials
     if identity_provider == "Kakao":
@@ -148,6 +160,5 @@ def get_temp_cred(id_token: str, identity_provider: str) -> dict:
             IdentityId=identity_id,
             Logins={f"accouts.google.com": id_token}
         )
-    # print(response['Credentials'])
 
     return response['Credentials']

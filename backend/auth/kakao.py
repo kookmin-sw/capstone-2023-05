@@ -27,8 +27,5 @@ def get_email(code):
 
     headers = {'Authorization': f'Bearer {access_token}'}
     user_information = requests.get("https://kapi.kakao.com/v2/user/me", headers=headers).json()
-    # print(user_information)
 
-    user_email = user_information['kakao_account']['email']
-
-    return user_email
+    return  user_information['kakao_account']['email']
