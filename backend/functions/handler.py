@@ -1,5 +1,6 @@
 import json
 import os
+import requests
 import auth.kakao as kakao
 import auth.cognito as cognito
 
@@ -89,29 +90,38 @@ def kakao_login(event, context):
             "headers": {"Content-Type": "text/html"}
         }
     else:
-        # Show this html to redirecting
-        redirect_html = """
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <title>You already have account!</title>
-            </head>
-            <body>
-                <h1>Your Account</h1>
-                <li> email: %s</li>
-                <li> nickname: %s</li>
-                <p>
-                    <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&newuser=%d">Continue with your account</a>
-                </p>
-            </body>
-        </html>
-        """ % (email, nickname, email, nickname, 0)
-
-        return {
-            "statusCode": 302,
-            "body": redirect_html,
-            "headers": {"Content-Type": "text/html"}
+        parameters = {
+            "email": email,
+            "nickname": nickname,
+            "newuser": 0
         }
+        auth_result = requests.get("http://localhost:3000/dev/login/cognito", params=parameters).json()
+        return {
+            'statusCode': 200,
+            'body': json.dumps(auth_result)
+        }
+        # Show this html to redirecting
+        # redirect_html = """
+        # <!DOCTYPE html>
+        # <html>
+        #     <head>
+        #         <title>You already have account!</title>
+        #     </head>
+        #     <body>
+        #         <h1>Your Account</h1>
+        #         <li> email: %s</li>
+        #         <li> nickname: %s</li>
+        #         <p>
+        #             <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&newuser=%d">Continue with your account</a>
+        #         </p>
+        #     </body>
+        # </html>
+        # """ % (email, nickname, email, nickname, 0)
+        # return {
+        #     "statusCode": 302,
+        #     "body": redirect_html,
+        #     "headers": {"Content-Type": "text/html"}
+        # }
     
 
 def cognito_login(event, context):
@@ -137,7 +147,7 @@ def cognito_login(event, context):
             'email': email,
             'nickname': nickname,
             'cognito-authentication': cognito_auth,
-            'temp-cred': json.dumps(temp_credentials)
+            'temp-cred': temp_credentials
         })
     }
 
