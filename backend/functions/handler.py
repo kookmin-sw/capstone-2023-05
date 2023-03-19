@@ -85,7 +85,7 @@ def kakao_login(event, context):
         """ % (email, nickname, email, 1)
 
         return {
-            "statusCode": 302,
+            "statusCode": 200,
             "body": get_nickname_html,
             "headers": {"Content-Type": "text/html"}
         }
@@ -100,28 +100,6 @@ def kakao_login(event, context):
             'statusCode': 200,
             'body': json.dumps(auth_result)
         }
-        # Show this html to redirecting
-        # redirect_html = """
-        # <!DOCTYPE html>
-        # <html>
-        #     <head>
-        #         <title>You already have account!</title>
-        #     </head>
-        #     <body>
-        #         <h1>Your Account</h1>
-        #         <li> email: %s</li>
-        #         <li> nickname: %s</li>
-        #         <p>
-        #             <a href="http://localhost:3000/dev/login/cognito?email=%s&nickname=%s&newuser=%d">Continue with your account</a>
-        #         </p>
-        #     </body>
-        # </html>
-        # """ % (email, nickname, email, nickname, 0)
-        # return {
-        #     "statusCode": 302,
-        #     "body": redirect_html,
-        #     "headers": {"Content-Type": "text/html"}
-        # }
     
 
 def cognito_login(event, context):
@@ -152,16 +130,15 @@ def cognito_login(event, context):
     }
 
 
-# TODO: Question! Do I have to control about tokens?
 def logout(event, context):
-    # I need refresh token from cognito. And refresh token will be in body.
-    event_body = json.dumps(event['body'])
-    cognito.block_token(event_body['refresh-token'], event_body['credentials'])
+    # sign-out user
+    access_token = event['headers']['Authorization']
+    cognito.sign_out(access_token)
 
     # Redirect to login page
     return {
         'statusCode': 302,
-        'headers': {'Location': 'http://localhost:3000/dev/login'}
+        'headers': {'Location': 'http://localhost:3000/dev/login'},
     }
 
 

@@ -91,6 +91,11 @@ def sign_up(_client, email: str):
     )
 
 
+def sign_out(access_token: str):
+    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
+    idp_client.global_sign_out(AccessToken=access_token)
+
+
 def delete_account(name: str):
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     idp_client.admin_delete_user(
@@ -146,44 +151,3 @@ def get_temp_cred(id_token: str, identity_provider: str) -> dict:
     # print(response['Credentials'])
 
     return response['Credentials']
-
-
-def block_token(refresh_token: str, temp_creds: dict) -> dict:
-    """
-    Revoke a refresh token issued by cognito.\n
-    When refresh token is revoked, all access tokens that were previously issued by this refresh token become invalid.\n
-    :param token: Refresh token
-    """
-    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
-    # Revoke access token
-    response = idp_client.revoke_token(
-        Token=refresh_token,
-        ClientId=os.getenv("AWS_COGNITO_CLIENT_ID")
-    )
-
-    # Expiring session token
-    temp_creds['Expiration'] = datetime.now()
-
-
-if __name__ == "__main__":
-    my_tokens = get_token("capstone.202305@kakao.com")
-    my_temp_creds = get_temp_cred(my_tokens['IdToken'], "Kakao")
-    response = block_token(my_tokens['RefreshToken'], my_temp_creds)
-    print(my_temp_creds['Expiration'])
-
-    try:
-        test_client = boto3.client('cognito-idp')
-        test_client.set_user_settings(
-            AccessToken=my_tokens['AccessToken'],
-            MFAOptions=[
-                {
-                    'DeliveryMedium': 'SMS',
-                    'AttributeName': 'phone_number'
-                }
-            ]
-        )
-    except test_client.exceptions.NotAuthorizedException:
-        print("Successfully revoked your aws access token.")
-
-    
-    
