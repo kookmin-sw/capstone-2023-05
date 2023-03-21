@@ -30,7 +30,7 @@ def login(event, context):
                         window.location.href = "https://kauth.kakao.com/authorize?response_type=code&client_id=%s&redirect_uri=%s";
                     }
                     function loginGoogle() {
-                        window.location.href = "https://naruhodoo-test.auth.ap-northeast-2.amazoncognito.com/login?response_type=token&client_id=%s&redirect_uri=%s";
+                        window.location.href = "https://naruhodoo-test.auth.ap-northeast-2.amazoncognito.com/login?response_type=code&client_id=%s&redirect_uri=%s";
                     }
                 </script>
             </body>
@@ -162,7 +162,7 @@ def delete_account(event, context):
     Trying to delete user in cognito user pool.\n
     :return: Response for deleting user.
     """
-    
+
     cognito.delete_account(json.loads(event['body'])['email'])
 
     return {
@@ -172,13 +172,20 @@ def delete_account(event, context):
 
     
 def google_login(event, context):
-    # TODO: How to get ID token? Access token is on the redirect url, but token is not in queryParameters!
+    # TODO: How can I change code to id token?
     # temp_credentials = cognito.get_temp_cred(google_id_token, "Google")
+    google_code = event['queryStringParameters']['code']
+    body = {
+        "grant_type": "authorization_code",
+        "code": google_code,
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+        "redirect_uri": "http://localhost:3000/dev/login/cognito"
+    }
+    response = requests.post("https://oauth2.googleapis.com/token", data=body)
+    print(response.content)
 
     return {
         "statusCode": 200,
-        "body": json.dumps({
-            "input": event,
-            "message": "Login from Google!"
-        })
+        "body": google_code
     }

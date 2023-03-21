@@ -1,7 +1,5 @@
 import boto3
-import botocore
 import os
-from datetime import datetime
 
 
 def set_nickname(user_name: str, nickname: str) -> None:
@@ -108,7 +106,7 @@ def delete_account(name: str):
     Trying to delete user in cognito user pool.\n
     :param name: The email you registered.
     """
-    
+
     idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     idp_client.admin_delete_user(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
