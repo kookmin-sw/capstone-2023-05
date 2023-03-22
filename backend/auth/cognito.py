@@ -2,6 +2,22 @@ import boto3
 import os
 
 
+def get_username(email: str) -> str:
+    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
+    response = idp_client.list_users(
+        UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID")
+    )
+
+    for user in response['Users']:
+        if email == user['Username']:
+            for attr in user['Attributes']:
+                # If user logged in from Kakao, nickname will be exist
+                # Else if user logged in from Google, he doesn't have nickname
+                # So find from email attribute
+                if attr['Name'] == "nickname" or attr['Name'] == "email":
+                    return attr['Value']
+        
+
 def set_nickname(user_name: str, nickname: str) -> None:
     """
     Trying to setting nickname\n
@@ -30,27 +46,14 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
     :return: nickname and flag for checking newbie
     """
 
-    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
-    response = idp_client.list_users(
-        UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID")
-    )
-
-    # Checking if user already in cognito user pool or not.
-    # If not exist, do sign-up
     new_created = False
-    nickname = "TempNickname"
-    for user in response['Users']:
-        if email == user['Username']:
-            for attr in user['Attributes']:
-                if attr['Name'] == "nickname":
-                    nickname = attr['Value']
-                    break
-            break
-    else:
-        sign_up(idp_client, email)
+    cognito_user_name = get_username(email)
+    if not cognito_user_name:
+        sign_up(email)
         new_created = True
 
     # Add user to group in cognito user pool
+    idp_client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     if identity_provider is not None:
         response = idp_client.admin_add_user_to_group(
             UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
@@ -58,19 +61,19 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
             GroupName=os.getenv("AWS_COGNITO_USER_POOL_ID") + "_" + identity_provider
         )
 
-    return nickname, new_created
+    return cognito_user_name, new_created
 
 
-def sign_up(_client, email: str):
+def sign_up(email: str):
     """
     Trying to sign-up user logged in from Kakao.\n
-    :param _client: boto3.client object
     :param email: User's Kakao email
     :param nickname: User's Kakao nickname
     """
 
+    client = boto3.client('cognito-idp', region_name='ap-northeast-2')
     # Create user to cognito user pool
-    _client.admin_create_user(
+    client.admin_create_user(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
         Username=email,
         UserAttributes=[
@@ -83,7 +86,7 @@ def sign_up(_client, email: str):
     )
 
     # Change to new password
-    _client.admin_set_user_password(
+    client.admin_set_user_password(
         UserPoolId=os.getenv("AWS_COGNITO_USER_POOL_ID"),
         Username=email,
         Password='Naruhodo5!',
@@ -114,7 +117,7 @@ def delete_account(name: str):
     )
 
 
-def get_token(email: str) -> dict:
+def get_token(user_name: str) -> dict:
     """
     Trying to get tokens(Access Token, Refresh Token, ID Token).\n
     :param email: User's email
@@ -126,7 +129,7 @@ def get_token(email: str) -> dict:
     response = idp_client.initiate_auth(
         AuthFlow='USER_PASSWORD_AUTH',
         AuthParameters={
-            'USERNAME': email,
+            'USERNAME': user_name,
             'PASSWORD': "Naruhodo5!"
         },
         ClientId=os.getenv("AWS_COGNITO_CLIENT_ID")
@@ -135,10 +138,12 @@ def get_token(email: str) -> dict:
     return response['AuthenticationResult']
 
 
-def get_temp_cred(id_token: str, identity_provider: str) -> dict:
+def get_temp_cred(id_token: str, user_name=None) -> dict:
     """
     Trying to get temporary credentials to user in cognito user pool.\n
     :param id_token: ID Token you get from cognito user pool\n
+    :param identity_provider: Kakao or Google\n
+    :param user_name: It is required if identity_provider is Google\n
     :return: Information about temporary credentials.\n
     """
 
@@ -147,16 +152,10 @@ def get_temp_cred(id_token: str, identity_provider: str) -> dict:
     identity_id = idp_client.get_id(IdentityPoolId=os.getenv('AWS_COGNITO_IDENTITY_POOL_ID'))['IdentityId']
 
     # Get temp credentials
-    if identity_provider == "Kakao":
-        user_pool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
-        response = idp_client.get_credentials_for_identity(
-            IdentityId=identity_id,
-            Logins={f"cognito-idp.ap-northeast-2.amazonaws.com/{user_pool_id}": id_token}
-        )
-    elif identity_provider == "Google":
-        response = idp_client.get_credentials_for_identity(
-            IdentityId=identity_id,
-            Logins={f"accouts.google.com": id_token}
-        )
+    user_pool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
+    response = idp_client.get_credentials_for_identity(
+        IdentityId=identity_id,
+        Logins={f"cognito-idp.ap-northeast-2.amazonaws.com/{user_pool_id}": id_token}
+    )      
 
     return response['Credentials']
