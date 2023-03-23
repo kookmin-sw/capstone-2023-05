@@ -24,6 +24,20 @@ functions:
           path: /login/kakao
           method: get
 
+  process:
+    handler: functions/handler.process
+    events:
+      - http:
+          path: /login/process
+          method: get
+
+  get_nickname:
+    handler: functions/handler.nickname
+    events:
+      - http:
+          path: /profile/nickname
+          method: get
+
   google_login:
     handler: functions/handler.google_login
     events:

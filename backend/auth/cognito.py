@@ -38,12 +38,12 @@ def set_nickname(user_name: str, nickname: str) -> None:
     )
 
 
-def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
+def sign_in(email: str, identity_provider: str=None) -> bool:
     """
     Trying to sign-in with kakao account.\n
     If user didn't register in cognito. Do sign-up\n
     :param email: Kakao email
-    :return: nickname and flag for checking newbie
+    :return: A flag for checking newbie
     """
 
     new_created = False
@@ -61,7 +61,7 @@ def sign_in(email: str, identity_provider: str=None) -> tuple[str, bool]:
             GroupName=os.getenv("AWS_COGNITO_USER_POOL_ID") + "_" + identity_provider
         )
 
-    return cognito_user_name, new_created
+    return new_created
 
 
 def sign_up(email: str):
