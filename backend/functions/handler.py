@@ -206,7 +206,7 @@ def nickname(event, context):
                         var params = {
                             AccessToken: cognitoAccessToken,
                             UserAttributes: [{
-                                Name: nickname,
+                                Name: 'nickname',
                                 Value: userNickname
                             }]
                         };
