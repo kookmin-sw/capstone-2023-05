@@ -66,9 +66,6 @@ def process(event, context):
             const newbie = urlParams.get('newbie');
             const cognitoAccessToken = urlParams.get('token');
 
-            console.log(email); console.log(newbie); console.log(cognitoAccessToken);
-
-
             // Redirect to the specified URL
             if (newbie == 1) {
                 window.location.href = "http://localhost:3000/dev/profile/nickname?email=" + email + "&token=" + cognitoAccessToken;
@@ -85,8 +82,6 @@ def process(event, context):
                 // Create an instance of the CognitoIdentityServiceProvider class
                 var cognitoIdP = new AWS.CognitoIdentityServiceProvider();
 
-                
-
                 // Call the listUsers method to retrieve a list of users
                 function getNicknameByEmail(email, callback) {
                     // Set the parameters for the listUsers method
@@ -101,22 +96,20 @@ def process(event, context):
                             console.log(err, err.stack);
                         } else {
                             const userList = data.Users;
-                            console.log(data.Users);
-
-                            var nickname;
+                            var attrsArray = Array();
                             for (var i = 0; i < userList.length; i++) {
-                                if (userList[i].Attributes[0].Value == email) {
-                                    console.log(userList[i].Attributes[1].Value)
-                                    nickname = userList[i].Attributes[1].Value;
+                                const user = userList[i];
+                                if (user.Attributes.find(attr => attr.Name === 'email' && attr.Value === email)) {
+                                    const nickname = user.Attributes.find(attr => attr.Name === 'nickname');
+                                    callback(nickname.Value);
                                 }
                             }
-
-                            callback(nickname);
                         }
                     });
                 }
 
                 getNicknameByEmail(email, function(nickname) {
+                    console.log(nickname);
                     window.location.href = "http://localhost:3000/dev/login/cognito?username=" + email + "&nickname=" + nickname + "&provider=Kakao";
                 });
             }
@@ -132,8 +125,6 @@ def process(event, context):
 
 
 def nickname(event, context):
-    # TODO: Why nickname is 'undefined'?
-    
     nickname_html = """
     <!DOCTYPE html>
     <html>
@@ -180,20 +171,9 @@ def nickname(event, context):
                             console.log(err, err.stack);
                         } else {
                             const userList = data.Users;
-                            var name;
                             for (var i = 0; i < userList.length; i++) {
-                                if (userList[i].Username == email){
-                                    name = userList[i].Username;
-                                    break;
-                                }
-                                else if (userList[i].Attributes[0].Value == email) {
-                                    console.log(userList[i].Attributes[0].Value)
-                                    name = userList[i].Username;
-                                    break;
-                                }
+                                if ((userList[i].Username == email) || (userList[i].Attributes.find(attr => attr.Name === 'email' && attr.Value === email))) { callback(userList[i].Username); }
                             }
-
-                            callback(name);
                         }
                     });
                 }
@@ -205,10 +185,16 @@ def nickname(event, context):
                     getNameByEmail(email, function(name) {
                         var params = {
                             AccessToken: cognitoAccessToken,
-                            UserAttributes: [{
-                                Name: 'nickname',
-                                Value: userNickname
-                            }]
+                            UserAttributes: [
+                                {
+                                    Name: 'nickname',
+                                    Value: userNickname
+                                },
+                                {
+                                    Name: 'email',
+                                    Value: email
+                                }
+                            ]
                         };
                         cognitoIdP.updateUserAttributes(params, function(err, data) {
                             if (err) {
@@ -227,6 +213,27 @@ def nickname(event, context):
         "statusCode": 200,
         "body": nickname_html,
         "headers": {"Content-Type": "text/html"}
+    }
+
+
+def kakao_login(event, context):
+    """
+    Trying to login through Kakao account\n
+    :return: Response for Kakao login.
+    """
+
+    # Get authorized code from Kakao
+    access_code = event['queryStringParameters']['code']
+    email = kakao.get_email(access_code)
+
+    # Sign in to cognito user pool. And get ID token.
+    is_newbie = cognito.sign_in(email, "Kakao")
+    cognito_auth = cognito.get_token(email)
+    access_token = cognito_auth['AccessToken']
+
+    return {
+        'statusCode': 302,
+        'headers': {'Location': 'http://localhost:3000/dev/login/process?email=%s&newbie=%d&token=%s' % (email, is_newbie, access_token)}
     }
 
 
@@ -303,27 +310,6 @@ def google_login(event, context):
     #     "body": get_nickname_html,
     #     "headers": {"Content-Type": "text/html"}
     # }
-
-
-def kakao_login(event, context):
-    """
-    Trying to login through Kakao account\n
-    :return: Response for Kakao login.
-    """
-
-    # Get authorized code from Kakao
-    access_code = event['queryStringParameters']['code']
-    email = kakao.get_email(access_code)
-
-    # Sign in to cognito user pool. And get ID token.
-    is_newbie = cognito.sign_in(email, "Kakao")
-    cognito_auth = cognito.get_token(email)
-    access_token = cognito_auth['AccessToken']
-
-    return {
-        'statusCode': 302,
-        'headers': {'Location': 'http://localhost:3000/dev/login/process?email=%s&newbie=%d&token=%s' % (email, is_newbie, access_token)}
-    }
     
 
 def cognito_login(event, context):
