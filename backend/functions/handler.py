@@ -42,7 +42,7 @@ def login(event, context):
                 </script>
             </body>
         </html>
-        """ % (os.getenv("KAKAO_REST_API_KEY"), "http://localhost:3000/dev/login/kakao", os.getenv("AWS_COGNITO_CLIENT_ID"), "http://localhost:3000/dev/login/google")
+        """ % (os.getenv("KAKAO_REST_API_KEY"), "http://localhost:3000/dev/login/kakao", os.getenv("AWS_COGNITO_CLIENT_ID"), "http://localhost:3000/dev/login/gooprocess")
     
     return {
             "statusCode": 200,
@@ -51,7 +51,7 @@ def login(event, context):
         }
 
 
-def process(event, context):
+def kakao_process(event, context):
     process_html ="""
     <!DOCTYPE html>
     <html>
@@ -113,6 +113,31 @@ def process(event, context):
                     window.location.href = "http://localhost:3000/dev/login/cognito?username=" + email + "&nickname=" + nickname + "&provider=Kakao";
                 });
             }
+        </script>
+    </head>
+    </html>
+    """
+    return {
+        "statusCode": 200,
+        "body": process_html,
+        "headers": {"Content-Type": "text/html"}
+    }
+
+
+def google_process(event, context):
+    process_html ="""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Redirecting...</title>
+        <script src="https://sdk.amazonaws.com/js/aws-sdk-2.815.0.min.js"></script>
+        <script>
+            // Retrieve query parameters from URL
+            const cognitoAccessToken = window.location.hash.substring(1);
+            // console.log(cognitoAccessToken);
+
+            /* Now check nickname attribute.
+               If nickname attribute doesn't exist, he is newbie! */
         </script>
     </head>
     </html>
@@ -238,12 +263,10 @@ def kakao_login(event, context):
 
 
 def google_login(event, context):
-    # How to get user's google account? => Get token from code and decode the token
-    code = event['queryStringParameters']['code']
-    
+    # How to get user's google account? => Get token from code and decode the token    
     return {
         'statusCode': 200,
-        'body': code
+        'body': "Hello"
     }
 
     # cognito_user_name = cognito.get_username(google_email)

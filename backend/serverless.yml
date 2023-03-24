@@ -24,20 +24,6 @@ functions:
           path: /login/kakao
           method: get
 
-  process:
-    handler: functions/handler.process
-    events:
-      - http:
-          path: /login/process
-          method: get
-
-  get_nickname:
-    handler: functions/handler.nickname
-    events:
-      - http:
-          path: /profile/nickname
-          method: get
-
   google_login:
     handler: functions/handler.google_login
     events:
@@ -65,6 +51,27 @@ functions:
       - http:
           path: /profile
           method: delete
+
+  kakao_process:
+    handler: functions/handler.kakao_process
+    events:
+      - http:
+          path: /login/kaprocess
+          method: get
+
+  google_process:
+    handler: functions/handler.google_process
+    events:
+      - http:
+          path: /login/gooprocess
+          method: get
+
+  get_nickname:
+    handler: functions/handler.nickname
+    events:
+      - http:
+          path: /profile/nickname
+          method: get
 
 plugins:
   - serverless-python-requirements
