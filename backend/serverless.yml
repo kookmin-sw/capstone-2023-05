@@ -14,8 +14,6 @@ provider:
       - ${ssm:/naruhodoo/aws/security_group}
     subnetIds:
       - ${ssm:/naruhodoo/aws/subnet1}
-      - ${ssm:/naruhodoo/aws/subnet2}
-      - ${ssm:/naruhodoo/aws/subnet3}
       - ${ssm:/naruhodoo/aws/subnet4}
   environment:
     POSTGRES_HOST: ${ssm:/naruhodoo/${self:provider.stage}/postgres/host, env:POSTGRES_HOST}
