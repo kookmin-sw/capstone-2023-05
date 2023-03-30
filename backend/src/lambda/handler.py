@@ -57,42 +57,67 @@ def connect_handler(event, context):
     team_id = query_parameters['teamId']
     nickname = query_parameters['nickname']
     
-    # battleId, teamId, nickname
     dynamo_db.put_item(
         TableName="websocket-connections-jwlee-test",
         Item={
-            'connection-ID': {'S': connection_id},
-            'battle-ID': {'S': battle_id},
-            'team-ID': {'S': team_id},
+            'connectionID': {'S': connection_id},
+            'battleID': {'S': battle_id},
+            'teamID': {'S': team_id},
             'nickname': {'S': nickname}
         }
     )
     
-    return {'statusCode': 200, 'body': json.dumps({'message': "Clear"})}
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'message': "Add connection to DB"})
+    }
 
 
 def disconnect_handler(event, context):
     connection_id = event['requestContext']['connectionId']
+
+    # Find request user's battle id
+    response = dynamo_db.scan(
+        TableName="websocket-connections-jwlee-test",
+        FilterExpression="connectionID = :connection_id",
+        ExpressionAttributeValues={":connection_id": {"S": connection_id}},
+        ProjectionExpression="battleID,connectionID"
+    )['Items']
+    battle_id = response[0]['battleID']['S']
     
     dynamo_db.delete_item(
         TableName="websocket-connections-jwlee-test",
-        Key={'connection-ID': {'S': connection_id}}
+        Key={
+            'battleID': {'S': battle_id},
+            'connectionID': {'S': connection_id}
+        }
     )
     
-    return {'statusCode': 200, 'body': json.dumps({'message': "Clear"})}
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'message': "Delete connection from DB"})
+    }
 
 
 def send_handler(event, context):
     paginator = dynamo_db.get_paginator('scan')
-    connection_ids = []
+    connections = []    # Contain all items in dynamodb table.
     for page in paginator.paginate(TableName="websocket-connections-jwlee-test"):
-        connection_ids.extend(page['Items'])
+        connections.extend(page['Items'])
 
-    my_connection = event['requestContext']['connectionId']
-    my_info = dynamo_db.get_item(
-        TableName="websocket-connections-jwlee-test",
-        Key={"connection-ID": {"S": my_connection}}
-    )['Item']
+    my_connection_id = event['requestContext']['connectionId']
+
+    # Find request user's connection information
+    my_info = None
+    for connection in connections:
+        if connection['connectionID']['S'] == my_connection_id:
+            my_info = connection
+            break
+    if my_info is None:
+        return {
+            'statusCode': 404,
+            'body': json.dumps({'message': "Cannot find your connection information"})
+        }
     
     apigatewaymanagementapi = boto3.client(
         'apigatewaymanagementapi',
@@ -100,13 +125,17 @@ def send_handler(event, context):
     )
     
     opinion = json.loads(event['body'])['opinion']
-        
-    for connection in connection_ids:
-        other_connection = connection['connection-ID']['S']
-        if other_connection != my_info['connection-ID']['S'] and connection['battle-ID']['S'] == my_info['battle-ID']['S'] and connection['team-ID']['S'] == my_info['team-ID']['S']:
+    
+    # Broadcast user's opinion to same team.
+    for connection in connections:
+        other_connection = connection['connectionID']['S']
+        if other_connection != my_info['connectionID']['S'] and connection['battleID']['S'] == my_info['battleID']['S'] and connection['teamID']['S'] == my_info['teamID']['S']:
             apigatewaymanagementapi.post_to_connection(
                 Data=opinion,
                 ConnectionId=other_connection
             )
         
-    return {'statusCode': 200, 'body': json.dumps({'message': "Clear"})}
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'message': "Post your opinion to your team"})
+    }
