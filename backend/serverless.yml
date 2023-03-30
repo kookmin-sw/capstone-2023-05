@@ -14,8 +14,6 @@ provider:
       - ${ssm:/naruhodoo/aws/security_group}
     subnetIds:
       - ${ssm:/naruhodoo/aws/subnet1}
-      - ${ssm:/naruhodoo/aws/subnet2}
-      - ${ssm:/naruhodoo/aws/subnet3}
       - ${ssm:/naruhodoo/aws/subnet4}
   environment:
     POSTGRES_HOST: ${ssm:/naruhodoo/${self:provider.stage}/postgres/host, env:POSTGRES_HOST}
@@ -26,6 +24,22 @@ provider:
     REDIS_HOST: ${ssm:/naruhodoo/${self:provider.stage}/redis/host, env:REDIS_HOST}
     REDIS_PORT: ${ssm:/naruhodoo/${self:provider.stage}/redis/port, env:REDIS_PORT}
     REDIS_DB: ${ssm:/naruhodoo/${self:provider.stage}/redis/db, env:REDIS_DB}
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - 'dynamodb:PutItem'
+            - 'dynamodb:DeleteItem'
+            - 'dynamodb:Scan'
+            - 'dynamodb:GetItem'
+          Resource:
+            - 'arn:aws:dynamodb:ap-northeast-2:401482569934:table/websocket-connections-jwlee-test'
+        - Effect: 'Allow'
+          Action:
+            - 'execute-api:ManageConnections'
+          Resource:
+            - 'arn:aws:execute-api:ap-northeast-2:401482569934:*/*/*/*'
 
 package:
   patterns:
@@ -57,6 +71,21 @@ functions:
       - http:
           path: /hello-db
           method: get
+  connect-handler:
+    handler: src/lambda/handler.connect_handler
+    events:
+      - websocket:
+          route: $connect
+  disconnect-handler:
+    handler: src/lambda/handler.disconnect_handler
+    events:
+      - websocket:
+          route: $disconnect
+  send-handler:
+    handler: src/lambda/handler.send_handler
+    events:
+      - websocket:
+          route: sendOpinion
 
 custom:
   customDomain:
