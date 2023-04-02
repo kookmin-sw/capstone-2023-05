@@ -89,7 +89,7 @@ https://www.naruhodoo.today
 
 -   #### :key: 프로세스 기반의 의견 선정
 
-    1. Refresh Rate(단위 시간)마다 Ads가 업데이트됩니다.
+    1. Refresh Rate(갱신 간격)마다 Ads가 업데이트됩니다.
     2. Refresh 단위 시간 당 Likes 수가 높은 상위 N개가 살아남고 나머지 의견은 사라집니다.
     3. 살아남은 의견은 다시 Like를 받을 수 있습니다
     4. User는 살아남은 의견에 Like를 다시 누를 수 있습니다. (자동 선택)
@@ -123,7 +123,7 @@ https://www.naruhodoo.today
 > -   **Ads (광고판)**: 채팅으로부터 랜덤으로 추출되어 유저가 투표할 수 있는 상태의 의견들
 > -   **Chat (채팅)**: 유저가 낸 모든 의견
 > -   **Opinion (의견)**: 유저가 내는 의견을 지칭한다
-> -   **Refresh Rate (갱신 간격)**: 업데이트가 되는 간격을 의미한다.
+> -   **Refresh Rate (갱신 간격)**: 갱신되는 간격을 의미한다.
 > -   **Refresh (갱신)**: Chat으로부터 새로운 의견을 랜덤 샘플링하여 Ads에 게시하고, Likes를 기반으로 Ads와 Best를 업데이트
 
 * ### 그 외 일반 용어 :bulb:
