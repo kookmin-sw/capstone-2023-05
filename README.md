@@ -87,7 +87,7 @@ https://www.naruhodoo.today
 
 ![](images/process.png)
 
--   #### :key: 프로세스 기반의 의견 선정
+-   #### :key: 의견 선출 프로세스
 
     1. Refresh Rate(갱신 간격)마다 Likes 수가 높은 상위 N개의 의견이 살아남고 나머지 의견은 Ads에서 사라집니다.
     2. Refresh 단위 시간 당 Likes 수가 높은 상위 N개가 살아남고 나머지 의견은 사라집니다.
