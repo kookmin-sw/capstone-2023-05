@@ -127,7 +127,7 @@ https://www.naruhodoo.today
 > -   **Refresh (갱신)**: Chat으로부터 새로운 의견을 랜덤 샘플링하여 Ads에 게시하고, Likes를 기반으로 Ads와 Best를 업데이트
 
 * ### 그 외 일반 용어 :bulb:
->-   **Host (방장)**: 토론을 주최한 사공
+>-   **Host (방장)**: 토론을 주최한 사람
 >-   **User (사용자)**: 토론에 참여한 사람
 >-   **Round (라운드)**: Preparation -> Disucussion -> Vote -> Mid-Result 네 단계를 묶어서 하나의 사이클로 지칭하는 단위
 >-   **Like (좋아요)**: 유저가 공감하는 의견에 표시하는 것
