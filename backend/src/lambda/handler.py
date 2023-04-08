@@ -55,11 +55,11 @@ def hello_db(event, context):
 def connect_handler(event, context):
     connection_id = event['requestContext']['connectionId']
     
-    query_parameters = event['queryStringParameters']
-    battle_id = query_parameters['battleId']
-    team_id = query_parameters['teamId']
-    nickname = query_parameters['nickname']
-    email = query_parameters['email']
+    headers = event['headers']
+    battle_id = headers['battleId']
+    team_id = headers['teamId']
+    nickname = headers['nickname']
+    email = headers['email']
     
     dynamo_db.put_item(
         TableName="websocket-connections-jwlee-test",
@@ -105,6 +105,8 @@ def disconnect_handler(event, context):
 
 
 def send_handler(event, context):
+    opinion_time = time.time()
+    
     paginator = dynamo_db.get_paginator('scan')
     connections = []    # Contain all items in dynamodb table.
     for page in paginator.paginate(TableName="websocket-connections-jwlee-test"):
@@ -129,7 +131,7 @@ def send_handler(event, context):
         endpoint_url=f"https://{event['requestContext']['domainName']}/{event['requestContext']['stage']}"
     )
     
-    opinion = json.loads(event['body'])['opinion']
+    opinion = my_info['nickname']['S'] + ": " + json.loads(event['body'])['opinion']
     
     # Broadcast user's opinion to same team.
     for connection in connections:
@@ -144,7 +146,6 @@ def send_handler(event, context):
     # extra fields: noOfLikes, content, status
     round, num_of_likes = json.loads(event['body'])['round'], 0
     status = "common"
-    opinion_time = time.time()
 
     psql_ctx = PostgresContext("172.18.0.3", os.getenv("POSTGRESQL_PORT"), os.getenv("POSTGRESQL_USER"),
                                os.getenv("POSTGRESQL_PASSWORD"), os.getenv("POSTGRESQL_DB"))
