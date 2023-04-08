@@ -1,8 +1,11 @@
 import json
 import platform
+import os
+import time
 import boto3
 
 from src.game import app
+from src.utility.context import PostgresContext
 from src.utility.decorator import cors
 
 
@@ -56,6 +59,7 @@ def connect_handler(event, context):
     battle_id = query_parameters['battleId']
     team_id = query_parameters['teamId']
     nickname = query_parameters['nickname']
+    email = query_parameters['email']
     
     dynamo_db.put_item(
         TableName="websocket-connections-jwlee-test",
@@ -63,7 +67,8 @@ def connect_handler(event, context):
             'connectionID': {'S': connection_id},
             'battleID': {'S': battle_id},
             'teamID': {'S': team_id},
-            'nickname': {'S': nickname}
+            'nickname': {'S': nickname},
+            'email': {'S': email}
         }
     )
     
@@ -129,12 +134,26 @@ def send_handler(event, context):
     # Broadcast user's opinion to same team.
     for connection in connections:
         other_connection = connection['connectionID']['S']
-        if other_connection != my_info['connectionID']['S'] and connection['battleID']['S'] == my_info['battleID']['S'] and connection['teamID']['S'] == my_info['teamID']['S']:
+        if connection['battleID']['S'] == my_info['battleID']['S'] and connection['teamID']['S'] == my_info['teamID']['S']:
             apigatewaymanagementapi.post_to_connection(
                 Data=opinion,
                 ConnectionId=other_connection
             )
-        
+
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    round, num_of_likes = json.loads(event['body'])['round'], 0
+    status = "common"
+    opinion_time = time.time()
+
+    psql_ctx = PostgresContext("172.18.0.3", os.getenv("POSTGRESQL_PORT"), os.getenv("POSTGRESQL_USER"),
+                               os.getenv("POSTGRESQL_PASSWORD"), os.getenv("POSTGRESQL_DB"))
+    psql_cursor = psql_ctx.cursor
+    # Or getting email from Postgres Database?
+    insert_query = f"INSERT INTO Opinion VALUES (\'{my_info['email']['S']}\', \'{my_info['battleID']['S']}\', {round}, {opinion_time}, {num_of_likes}, \'{opinion}\', \'{status}\')"
+    psql_cursor.execute(insert_query)
+    psql_ctx.client.commit()
+
     return {
         'statusCode': 200,
         'body': json.dumps({'message': "Post your opinion to your team"})
