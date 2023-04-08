@@ -86,6 +86,7 @@ functions:
     events:
       - websocket:
           route: sendOpinion
+    timeout: 29
 
 custom:
   customDomain:
