@@ -367,3 +367,6 @@ poetry.toml
 .envrc
 
 # End of https://www.toptal.com/developers/gitignore/api/python,macos,node,direnv
+
+# local test data volume
+volumes/

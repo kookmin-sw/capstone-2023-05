@@ -5,21 +5,56 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: python3.9
+  architecture: x86_64
   region: ap-northeast-2
   profile: ${env:AWS_PROFILE}
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, env:PRIVATE_STAGE}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/naruhodoo/aws/security_group}
+    subnetIds:
+      - ${ssm:/naruhodoo/aws/subnet1}
+      - ${ssm:/naruhodoo/aws/subnet4}
+  environment:
+    POSTGRES_HOST: ${ssm:/naruhodoo/${self:provider.stage}/postgres/host, env:POSTGRES_HOST}
+    POSTGRES_PORT: ${ssm:/naruhodoo/${self:provider.stage}/postgres/port, env:POSTGRES_PORT}
+    POSTGRES_USER: ${ssm:/naruhodoo/${self:provider.stage}/postgres/user, env:POSTGRES_USER}
+    POSTGRES_PASSWORD: ${ssm:/naruhodoo/${self:provider.stage}/postgres/password, env:POSTGRES_PASSWORD}
+    POSTGRES_DB: ${ssm:/naruhodoo/${self:provider.stage}/postgres/db, env:POSTGRES_DB}
+    REDIS_HOST: ${ssm:/naruhodoo/${self:provider.stage}/redis/host, env:REDIS_HOST}
+    REDIS_PORT: ${ssm:/naruhodoo/${self:provider.stage}/redis/port, env:REDIS_PORT}
+    REDIS_DB: ${ssm:/naruhodoo/${self:provider.stage}/redis/db, env:REDIS_DB}
+
+package:
+  patterns:
+    - "!volumes"
+    - "!node_modules"
 
 functions:
   hello:
-    handler: src/app/handler.hello
+    handler: src/lambda/handler.hello
     events:
       - http:
           path: /hello
           method: get
-
-plugins:
-  - serverless-python-requirements
-  - serverless-domain-manager
+  platform:
+    handler: src/lambda/handler.get_platform
+    events:
+      - http:
+          path: /platform
+          method: get
+  hello-redis:
+    handler: src/lambda/handler.hello_redis
+    events:
+      - http:
+          path: /hello-redis
+          method: get
+  hello-db:
+    handler: src/lambda/handler.hello_db
+    events:
+      - http:
+          path: /hello-db
+          method: get
 
 custom:
   customDomain:
@@ -28,3 +63,10 @@ custom:
     basePath: ${self:provider.stage}
     certificateName: ${env:CERTIFICATE_NAME}
     createRoute53Record: true
+  pythonRequirements:
+    dockerizePip: true  # Use docker to install dependencies for non-linux environments
+
+plugins:
+  - serverless-python-requirements
+  - serverless-domain-manager
+  - serverless-offline
