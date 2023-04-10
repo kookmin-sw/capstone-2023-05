@@ -2,6 +2,7 @@ import json
 import platform
 import os
 import time
+from datetime import datetime
 import boto3
 
 from src.game import app
@@ -52,9 +53,9 @@ def connect_handler(event, context):
     
     headers = event['headers']
     battle_id = headers['battleId']
-    team_id = headers['teamId']
     nickname = headers['nickname']
     email = headers['email']
+    team_id = ""
     
     dynamo_db.put_item(
         TableName="websocket-connections-jwlee-test",
@@ -100,7 +101,7 @@ def disconnect_handler(event, context):
 
 
 def send_handler(event, context):
-    opinion_time = time.time()
+    opinion_time = datetime.fromtimestamp(time.time())
     
     paginator = dynamo_db.get_paginator('scan')
     connections = []    # Contain all items in dynamodb table.
@@ -126,14 +127,14 @@ def send_handler(event, context):
         endpoint_url=f"https://{event['requestContext']['domainName']}/{event['requestContext']['stage']}"
     )
     
-    opinion = my_info['nickname']['S'] + ": " + json.loads(event['body'])['opinion']
+    opinion = json.loads(event['body'])['opinion']
     
     # Broadcast user's opinion to same team.
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == my_info['battleID']['S'] and connection['teamID']['S'] == my_info['teamID']['S']:
             apigatewaymanagementapi.post_to_connection(
-                Data=opinion,
+                Data=my_info['nickname']['S'] + ": " + opinion,
                 ConnectionId=other_connection
             )
 
@@ -142,11 +143,10 @@ def send_handler(event, context):
     round, num_of_likes = json.loads(event['body'])['round'], 0
     status = "common"
 
-    psql_ctx = PostgresContext("172.18.0.3", os.getenv("POSTGRESQL_PORT"), os.getenv("POSTGRESQL_USER"),
-                               os.getenv("POSTGRESQL_PASSWORD"), os.getenv("POSTGRESQL_DB"))
+    psql_ctx = PostgresContext(os.getenv("POSTGRES_HOST"), os.getenv("POSTGRES_PORT"), os.getenv("POSTGRES_USER"),
+                               os.getenv("POSTGRES_PASSWORD"), os.getenv("POSTGRES_DB"))
     psql_cursor = psql_ctx.cursor
-    # Or getting email from Postgres Database?
-    insert_query = f"INSERT INTO Opinion VALUES (\'{my_info['email']['S']}\', \'{my_info['battleID']['S']}\', {round}, {opinion_time}, {num_of_likes}, \'{opinion}\', \'{status}\')"
+    insert_query = f'INSERT INTO Opinion VALUES (\'75ead7fc-6f61-4a3e-839b-fb3642a2ad64\', \'75ead7fc-6f61-4a3e-839b-fb3642a2ad64\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
     psql_cursor.execute(insert_query)
     psql_ctx.client.commit()
 

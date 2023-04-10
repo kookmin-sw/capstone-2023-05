@@ -38,7 +38,6 @@ class PostgresContext:
         self.cursor = self.client.cursor()
     
     def __del__(self):
-        self.cursor.close()
         self.client.close()
 
     def __enter__(self):
