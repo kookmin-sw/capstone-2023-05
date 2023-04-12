@@ -370,3 +370,4 @@ poetry.toml
 
 # local test data volume
 volumes/
+.pip_cache/
