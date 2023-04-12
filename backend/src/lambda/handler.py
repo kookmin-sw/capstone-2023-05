@@ -2,8 +2,10 @@ import json
 import platform
 
 from src.game import app
+from src.utility.decorator import cors
 
 
+@cors
 def hello(event, context):
     msg = app.hello()
     response = {
@@ -13,6 +15,7 @@ def hello(event, context):
     return response
 
 
+@cors
 def get_platform(event, context):
     msg = platform.platform()
     response = {
@@ -22,6 +25,7 @@ def get_platform(event, context):
     return response
 
 
+@cors
 def hello_redis(event, context):
     client_info = app.hello_redis()
     response = {
@@ -31,6 +35,7 @@ def hello_redis(event, context):
     return response
 
 
+@cors
 def hello_db(event, context):
     msg = app.hello_db()
     response = {

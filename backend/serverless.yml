@@ -37,24 +37,39 @@ functions:
       - http:
           path: /hello
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+
   platform:
     handler: src/lambda/handler.get_platform
     events:
       - http:
           path: /platform
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+          
   hello-redis:
     handler: src/lambda/handler.hello_redis
     events:
       - http:
           path: /hello-redis
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+
   hello-db:
     handler: src/lambda/handler.hello_db
     events:
       - http:
           path: /hello-db
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
 
 custom:
   customDomain:
