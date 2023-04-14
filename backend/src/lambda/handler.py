@@ -94,19 +94,11 @@ def disconnect_handler(event, context):
 def init_join_handler(event, context):
     connection_id = event['requestContext']['connectionId']
 
-    # 데이터를 header로 보내는 경우
-    headers = event['headers']
-    battle_id = headers['battleId']
-    nickname = headers['nickname']
-    user_id = headers['userId']
+    data = json.loads(event['body'])
+    battle_id = data['battleId']
+    nickname = data['nickname']
+    user_id = data['userId']
     team_id = ""
-    
-    # 데이터를 queryStringParameter로 보내는 경우
-    # parameters = event['queryStringParameters']
-    # battle_id = parameters['battleId']
-    # nickname = parameters['nickname']
-    # user_id = parameters['userId']
-    # team_id = ""
 
     # DynamoDB에 정보 등록
     dynamo_db.put_item(
@@ -121,7 +113,7 @@ def init_join_handler(event, context):
     )
 
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
-    select_query = f"SELECT name FROM \"Team\" WHERE \"battleId\" = {battle_id}"
+    select_query = f"SELECT name FROM Team WHERE battleid = \'{battle_id}\'"
     psql_cursor.execute(select_query)
     rows = psql_cursor.fetchall()
     psql_cursor.close()
@@ -180,7 +172,7 @@ def send_handler(event, context):
     round, num_of_likes = json.loads(event['body'])['round'], 0
     status = "CANDIDATE"
 
-    insert_query = f'INSERT INTO \"Opinion\" VALUES ({user_id}, {battle_id}, {round}, {opinion_time}, {num_of_likes}, {opinion}, {status})'
+    insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, {opinion_time}, {num_of_likes}, \'{opinion}\', \'{status}\')'
     psql_cursor.execute(insert_query)
     psql_ctx.client.commit()
     psql_cursor.close()
