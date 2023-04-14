@@ -26,11 +26,11 @@ def hello_db():
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits + string.ascii_lowercase):
     """
-        Generate random lowercase string sequence 
+        Generate random string sequence 
         Arguments:
             lenght: int
         Returns:
-            Random 6 lowercase string sequence
+            Random 6 string sequence
     """
     return ''.join(random.choice(chars) for _ in range(size))
 
@@ -42,16 +42,26 @@ def create_room(event, context):
     DBNAME = os.environ['POSTGRES_DB']
     PASSWORD = os.environ['POSTGRES_PASSWORD']
 
+
+    body = json.loads(event['body'])
+
     try:
         conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
                                 user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
         cur = conn.cursor()
 
-        body = json.loads(event['body'])
-        
+        # Generate Random 6-length string
         room_id = id_generator()
 
-        # Run Query
+        # Checks for battle_id duplicate 
+        cur.execute("SELECT battleid from discussionbattle")
+        query_result = cur.fetchall()
+
+        battle_id_list = [result[0] for result in query_result]
+        while room_id in battle_id_list:
+            room_id = id_generator()
+
+        # Create Room
         cur.execute(
             f"""INSERT INTO DiscussionBattle(
                     battleId,
@@ -82,6 +92,12 @@ def create_room(event, context):
                 )
             """
         )
+
+
+        # Create 2 Teams
+
+        # Create N Rounds
+         
         conn.commit()
 
         # Close the Connection
@@ -93,7 +109,9 @@ def create_room(event, context):
             "body": json.dumps({
                 "message": "Room creation success",
                 "data": {
-                    "roomId": room_id
+                    "roomId": room_id,
+                    "teams": [],
+                    "rounds": []
                 }
             })
         }
@@ -138,15 +156,3 @@ def get_room(event, context):
                 "Error": str(e)
             })
         }
-
-def create_team(event, context):
-    pass
-
-def get_team(event, context):
-    pass
-
-def create_round(event, context):
-    pass
-
-def get_round(event, context):
-    pass
