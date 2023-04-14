@@ -70,6 +70,26 @@ functions:
           cors:
             origin: '*'
             headers: '*'
+  
+  create-room:
+    handler: src/lambda/handler.create_room
+    events:
+      - http:
+          path: /create-room
+          method: post
+          cors:
+            origin: '*'
+            headers: '*'
+
+  get-room:
+    handler: src/lambda/handler.get_room
+    events:
+      - http:
+          path: /get-room
+          method: get
+          cors:
+            origin: '*'
+            headers: '*'
 
 custom:
   customDomain:

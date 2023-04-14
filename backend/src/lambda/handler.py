@@ -1,8 +1,7 @@
-import json
-import platform
-
 from src.game import app
 from src.utility.decorator import cors
+import platform
+import os
 
 
 @cors
@@ -43,3 +42,13 @@ def hello_db(event, context):
         "body": msg
     }
     return response
+
+
+@cors
+def create_room(event, context):
+    return app.create_room(event, context)
+
+@cors
+def get_room(event, context):
+    return app.get_room(event, context)
+
