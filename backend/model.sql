@@ -1,7 +1,7 @@
 CREATE TYPE "battle_status" AS ENUM ('BEFORE_OPEN', 'RUNNING', 'CLOSED');
 CREATE TYPE "opinion_status" AS ENUM ('CANDIDATE', 'PUBLISHED', 'DROPPED', 'REPORTED');
 CREATE TABLE "User" (
-  userId serial NOT NULL,
+  userId varchar(50) NOT NULL,
   passwd bytea NOT NULL,
   email varchar(50) NOT NULL,
   nickname varchar(50) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE "User" (
 );
 CREATE TABLE DiscussionBattle (
   battleId varchar(6) NOT NULL,
-  ownerId serial NOT NULL,
+  ownerId varchar(50) NOT NULL,
   title varchar(50) NOT NULL,
   status battle_status NOT NULL,
   visibility boolean NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE Round (
   CONSTRAINT FK_1 FOREIGN KEY (battleId) REFERENCES DiscussionBattle (battleId)
 );
 CREATE TABLE Opinion (
-  userId serial NOT NULL,
+  userId varchar(50) NOT NULL,
   battleId varchar(6) NOT NULL,
   roundNo serial NOT NULL,
   "time" timestamp NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE Team (
   CONSTRAINT FK_4 FOREIGN KEY (battleId) REFERENCES DiscussionBattle (battleId)
 );
 CREATE TABLE Support (
-  userId serial NOT NULL,
+  userId varchar(50) NOT NULL,
   battleId varchar(6) NOT NULL,
   roundNo serial NOT NULL,
   vote serial NOT NULL,
