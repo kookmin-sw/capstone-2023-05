@@ -11,6 +11,9 @@ from src.utility.decorator import cors
 
 
 dynamo_db = boto3.client('dynamodb')
+psql_ctx = PostgresContext(os.getenv("POSTGRES_HOST"), os.getenv("POSTGRES_PORT"), os.getenv("POSTGRES_USER"),
+                               os.getenv("POSTGRES_PASSWORD"), os.getenv("POSTGRES_DB"))
+psql_cursor = psql_ctx.cursor
 
 
 @cors
@@ -54,28 +57,11 @@ def hello_db(event, context):
 
 
 def connect_handler(event, context):
-    connection_id = event['requestContext']['connectionId']
-    
-    headers = event['headers']
-    battle_id = headers['battleId']
-    nickname = headers['nickname']
-    email = headers['email']
-    team_id = ""
-    
-    dynamo_db.put_item(
-        TableName="websocket-connections-jwlee-test",
-        Item={
-            'connectionID': {'S': connection_id},
-            'battleID': {'S': battle_id},
-            'teamID': {'S': team_id},
-            'nickname': {'S': nickname},
-            'email': {'S': email}
-        }
-    )
-    
+    # 기존에 원스텝이었던 것을 투스텝으로 쪼개자.
+    # 여기서는 말 그대로 websocket 길만 뚫어준다.
     return {
         'statusCode': 200,
-        'body': json.dumps({'message': "Add connection to DB"})
+        'body': json.dumps({"message": "Connect Success"})
     }
 
 
@@ -105,17 +91,63 @@ def disconnect_handler(event, context):
     }
 
 
+def init_join_handler(event, context):
+    connection_id = event['requestContext']['connectionId']
+
+    # 데이터를 header로 보내는 경우
+    headers = event['headers']
+    battle_id = headers['battleId']
+    nickname = headers['nickname']
+    user_id = headers['userId']
+    team_id = ""
+    
+    # 데이터를 queryStringParameter로 보내는 경우
+    # parameters = event['queryStringParameters']
+    # battle_id = parameters['battleId']
+    # nickname = parameters['nickname']
+    # user_id = parameters['userId']
+    # team_id = ""
+
+    # DynamoDB에 정보 등록
+    dynamo_db.put_item(
+        TableName="websocket-connections-jwlee-test",
+        Item={
+            'connectionID': {'S': connection_id},
+            'battleID': {'S': battle_id},
+            'teamID': {'S': team_id},
+            'userID': {'S': user_id},
+            'nickname': {'S': nickname}
+        }
+    )
+
+    # 어떤 팀이 있는지 RDS에서 정보 가져오기
+    select_query = f"SELECT name FROM \"Team\" WHERE \"battleId\" = {battle_id}"
+    psql_cursor.execute(select_query)
+    rows = psql_cursor.fetchall()
+    psql_cursor.close()
+    team_names = [row for row in rows]
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'message': 'Join Request Success',
+            'teams': team_names
+        })
+    }
+
+
 def send_handler(event, context):
     opinion_time = datetime.fromtimestamp(time.time())
     
+    # DynamoDB의 모든 값을 얻어온다.
     paginator = dynamo_db.get_paginator('scan')
-    connections = []    # Contain all items in dynamodb table.
+    connections = []
     for page in paginator.paginate(TableName="websocket-connections-jwlee-test"):
         connections.extend(page['Items'])
 
     my_connection_id = event['requestContext']['connectionId']
 
-    # Find request user's connection information
+    # 사용자의 connection 정보를 찾는다.
     my_info = None
     for connection in connections:
         if connection['connectionID']['S'] == my_connection_id:
@@ -132,28 +164,26 @@ def send_handler(event, context):
         endpoint_url=f"https://{event['requestContext']['domainName']}/{event['requestContext']['stage']}"
     )
     
+    # 같은 팀에게 자신의 의견을 broadcasting 한다.
     opinion = json.loads(event['body'])['opinion']
-    
-    # Broadcast user's opinion to same team.
+    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     for connection in connections:
         other_connection = connection['connectionID']['S']
-        if connection['battleID']['S'] == my_info['battleID']['S'] and connection['teamID']['S'] == my_info['teamID']['S']:
+        if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
             apigatewaymanagementapi.post_to_connection(
-                Data=my_info['nickname']['S'] + ": " + opinion,
+                Data=nickname + ": " + opinion,
                 ConnectionId=other_connection
             )
 
     # PK: userId, battleId, roundNo, time
     # extra fields: noOfLikes, content, status
     round, num_of_likes = json.loads(event['body'])['round'], 0
-    status = "common"
+    status = "CANDIDATE"
 
-    psql_ctx = PostgresContext(os.getenv("POSTGRES_HOST"), os.getenv("POSTGRES_PORT"), os.getenv("POSTGRES_USER"),
-                               os.getenv("POSTGRES_PASSWORD"), os.getenv("POSTGRES_DB"))
-    psql_cursor = psql_ctx.cursor
-    insert_query = f'INSERT INTO Opinion VALUES (\'75ead7fc-6f61-4a3e-839b-fb3642a2ad64\', \'75ead7fc-6f61-4a3e-839b-fb3642a2ad64\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
+    insert_query = f'INSERT INTO \"Opinion\" VALUES ({user_id}, {battle_id}, {round}, {opinion_time}, {num_of_likes}, {opinion}, {status})'
     psql_cursor.execute(insert_query)
     psql_ctx.client.commit()
+    psql_cursor.close()
 
     return {
         'statusCode': 200,
