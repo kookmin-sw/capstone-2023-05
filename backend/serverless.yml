@@ -11,7 +11,7 @@ provider:
 
 functions:
   hello:
-    handler: src/app/handler.hello
+    handler: src/lambda/handler.hello
     events:
       - http:
           path: /hello
