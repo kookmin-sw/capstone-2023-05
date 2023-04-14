@@ -80,6 +80,8 @@ custom:
     createRoute53Record: true
   pythonRequirements:
     dockerizePip: true  # Use docker to install dependencies for non-linux environments
+    slim: true  # Slim down the size of the package by removing unneeded files
+    cacheLocation: '/Users/hoon/Projects/capstone/backend/.pip_cache'
 
 plugins:
   - serverless-python-requirements
