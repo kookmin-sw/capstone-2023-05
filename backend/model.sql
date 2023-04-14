@@ -64,3 +64,6 @@ CREATE TABLE Support (
   CONSTRAINT FK_6 FOREIGN KEY (vote) REFERENCES Team (teamId),
   CONSTRAINT FK_7 FOREIGN KEY (battleId, roundNo) REFERENCES Round (battleId, roundNo)
 );
+
+-- Insert Pseudo Data (User)
+INSERT INTO "User" (userid, passwd, email, nickname, profile) VALUES (DEFAULT, 'passwd'::bytea, 'kookmin@gmail.com', 'kookmin', 'Hey Hey Hey');

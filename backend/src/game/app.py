@@ -48,11 +48,8 @@ def create_room(event, context):
         cur = conn.cursor()
 
         body = json.loads(event['body'])
-
-        # Query Parameters
-        battle_id =   # 6 characters random
-
-        print(id_generator(size=6))
+        
+        room_id = id_generator()
 
         # Run Query
         cur.execute(
@@ -60,7 +57,7 @@ def create_room(event, context):
                     battleId,
                     ownerId, 
                     title,
-                    battle_status,
+                    status,
                     visibility,
                     switchChance,
                     startTime,
@@ -69,18 +66,19 @@ def create_room(event, context):
                     maxNoOfRounds,
                     maxNoVotes,
                     maxNoOfOpinion
-                ) VALUES(
-                    \'{id_generator()}\', 
-                    \'{id_generator()}\',
+                ) VALUES (
+                    \'{room_id}\', 
+                    \'{1}\',
                     \'{body['title']}\',
                     \'{body['battle_status']}\',
                     \'{body['visibility']}\',
                     \'{body['switchChance']}\',
-                    \'{body['startTime']}\',
-                    \'{0}\',
+                    null,
+                    null,
                     \'{body['description']}\',
                     \'{body['maxNoOfRounds']}\',
-                    \'{body['maxNoOfOpinion']}\',
+                    \'{body['maxNoOfVotes']}\',
+                    \'{body['maxNoOfOpinion']}\'
                 )
             """
         )
@@ -93,7 +91,10 @@ def create_room(event, context):
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": "Room creation success"
+                "message": "Room creation success",
+                "data": {
+                    "roomId": room_id
+                }
             })
         }
     except Exception as e:
@@ -137,3 +138,15 @@ def get_room(event, context):
                 "Error": str(e)
             })
         }
+
+def create_team(event, context):
+    pass
+
+def get_team(event, context):
+    pass
+
+def create_round(event, context):
+    pass
+
+def get_round(event, context):
+    pass
