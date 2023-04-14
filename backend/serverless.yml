@@ -81,6 +81,11 @@ functions:
     events:
       - websocket:
           route: $disconnect
+  init-join-handler:
+    handler: src/lambda/handler.init_join_handler
+    events:
+      - websocket:
+          route: initJoin
   send-handler:
     handler: src/lambda/handler.send_handler
     events:
