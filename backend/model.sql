@@ -18,7 +18,7 @@ CREATE TABLE DiscussionBattle (
   startTime timestamp NULL,
   endTime timestamp NULL,
   description varchar(100) NULL,
-  maxNoIfRounds integer NOT NULL,
+  maxNoOfRounds integer NOT NULL,
   maxNoVotes integer NOT NULL,
   maxNoOfOpinion integer NOT NULL,
   CONSTRAINT PK_DISCUSSION_BATTLE_ID PRIMARY KEY (battleId),
