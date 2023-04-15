@@ -19,7 +19,7 @@ CREATE TABLE DiscussionBattle (
   endTime timestamp NULL,
   description varchar(100) NULL,
   maxNoOfRounds integer NOT NULL,
-  maxNoVotes integer NOT NULL,
+  maxNoOfVotes integer NOT NULL,
   maxNoOfOpinion integer NOT NULL,
   CONSTRAINT PK_DISCUSSION_BATTLE_ID PRIMARY KEY (battleId),
   CONSTRAINT FK_8 FOREIGN KEY (ownerId) REFERENCES "User" (userId)
@@ -27,7 +27,7 @@ CREATE TABLE DiscussionBattle (
 CREATE TABLE Round (
   battleId VARCHAR(6) NOT NULL,
   roundNo serial NOT NULL,
-  startTime timestamp NOT NULL,
+  startTime timestamp NULL,
   endTime timestamp NULL,
   description varchar(100) NULL,
   CONSTRAINT PK_ROUND_ID PRIMARY KEY (battleId, roundNo),
@@ -49,7 +49,7 @@ CREATE TABLE Team (
   teamId serial NOT NULL,
   battleId varchar(6) NOT NULL,
   name varchar(50) NOT NULL,
-  image bytea NOT NULL,
+  image varchar NOT NULL,
   CONSTRAINT PK_TEAM_ID PRIMARY KEY (teamId),
   CONSTRAINT FK_4 FOREIGN KEY (battleId) REFERENCES DiscussionBattle (battleId)
 );
@@ -65,5 +65,33 @@ CREATE TABLE Support (
   CONSTRAINT FK_7 FOREIGN KEY (battleId, roundNo) REFERENCES Round (battleId, roundNo)
 );
 
--- Insert Pseudo Data (User)
+-- Insert Pseudo Data
+INSERT INTO DiscussionBattle(
+  battleId,
+  ownerId,
+  title,
+  status,
+  visibility,
+  switchChance,
+  startTime,
+  endTime,
+  description,
+  maxNoOfRounds,
+  maxNoOfVotes,
+  maxNoOfOpinion
+) VALUES (
+  'ABC123',
+  1,
+  'Peach vs Apple',
+  'BEFORE_OPEN',
+  TRUE,
+  TRUE,
+  NULL,
+  NULL,
+  "Quick Game",
+  3,
+  3,
+  1000
+);
+
 INSERT INTO "User" (userid, passwd, email, nickname, profile) VALUES (DEFAULT, 'passwd'::bytea, 'kookmin@gmail.com', 'kookmin', 'Hey Hey Hey');

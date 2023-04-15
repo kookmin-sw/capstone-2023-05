@@ -36,7 +36,7 @@ functions:
     events:
       - http:
           path: /hello
-          method: get
+          method: GET
           cors:
             origin: '*'
             headers: '*'
@@ -46,7 +46,7 @@ functions:
     events:
       - http:
           path: /platform
-          method: get
+          method: GET
           cors:
             origin: '*'
             headers: '*'
@@ -56,7 +56,7 @@ functions:
     events:
       - http:
           path: /hello-redis
-          method: get
+          method: GET
           cors:
             origin: '*'
             headers: '*'
@@ -66,27 +66,79 @@ functions:
     events:
       - http:
           path: /hello-db
-          method: get
+          method: GET
           cors:
             origin: '*'
             headers: '*'
   
-  create-room:
-    handler: src/lambda/handler.create_room
+  # Battle REST APIs
+  create-battle:
+    handler: src/lambda/handler.create_battle
     events:
       - http:
-          path: /create-room
-          method: post
+          path: /battles
+          method: POST
+          cors:
+            origin: '*'
+            headers: '*'
+  
+  get-battles:
+    handler: src/lambda/handler.get_battles
+    events:
+      - http:
+          path: /battles
+          method: GET
           cors:
             origin: '*'
             headers: '*'
 
-  get-room:
-    handler: src/lambda/handler.get_room
+  get-battle:
+    handler: src/lambda/handler.get_battle
     events:
       - http:
-          path: /get-room
-          method: get
+          path: /battles/{battleId}
+          method: GET
+          cors:
+            origin: '*'
+            headers: '*'
+
+  start-battle:
+    handler: src/lambda/handler.start_battle
+    events:
+      - http:
+          path: /battles/{battleId}/start
+          method: PUT
+          cors:
+            origin: '*'
+            headers: '*'
+
+  end-battle:
+    handler: src/lambda/handler.end_battle
+    events:
+      - http:
+          path: /battles/{battleId}/end
+          method: PUT
+          cors:
+            origin: '*'
+            headers: '*'
+  
+  # Round REST APIs
+  start-round:
+    handler: src/lambda/handler.start_round
+    events:
+      - http:
+          path: /rounds/{roundId}/start
+          method: PUT
+          cors:
+            origin: '*'
+            headers: '*'
+
+  end-round:
+    handler: src/lambda/handler.end_round
+    events:
+      - http:
+          path: /rounds/{roundId}/end
+          method: PUT
           cors:
             origin: '*'
             headers: '*'

@@ -45,10 +45,60 @@ def hello_db(event, context):
 
 
 @cors
-def create_room(event, context):
-    return app.create_room(event, context)
+def create_battle(event, context):
+    """
+        HTTP Method: POST
+        Creates new battle
+    """
+    return app.create_battle(event, context)
 
 @cors
-def get_room(event, context):
-    return app.get_room(event, context)
+def get_battles(event, context):
+    """
+        HTTP Method: GET
+        Get all the battles info
+    """
+    return app.get_battles(event, context)
+
+@cors
+def get_battle(event, context):
+    """
+        HTTP Method: PUT
+        Update battle
+    """
+    return app.get_battle(event, context)
+
+@cors
+def start_battle(event, context):
+    """
+        HTTP Method: PUT
+        
+        Starts Battle and sets battle status as RUNNING
+    """ 
+    return app.start_battle(event, context)
+
+@cors
+def end_battle(event, context):
+    """
+        HTTP METHOD: PUT
+        Ends Battle and sets battle status as CLOSED
+    """
+    return app.end_battle(event, context)
+
+@cors
+def start_round(event, context):
+    """
+        HTTP METHOD: PUT
+        Starts Round and set round status as RUNNING
+    """
+    return app.start_round(event, context)
+
+@cors
+def end_round(event, context):
+    """
+        HTTP METHOD: PUT
+        Ends Round and set round status as RUNNING
+    """
+    return app.end_round(event, context)
+
 
