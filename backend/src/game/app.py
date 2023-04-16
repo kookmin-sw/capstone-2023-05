@@ -89,6 +89,7 @@ def create_battle(event, context):
                     endTime,
                     description,
                     maxNoOfRounds,
+                    currentRound,
                     maxNoOfVotes,
                     maxNoOfOpinion
                 ) VALUES (
@@ -102,6 +103,7 @@ def create_battle(event, context):
                     null,
                     \'{body['description']}\',
                     \'{body['maxNoOfRounds']}\',
+                    0
                     \'{body['maxNoOfVotes']}\',
                     \'{body['maxNoOfOpinion']}\'
                 )
@@ -271,10 +273,10 @@ def start_battle(event, context):
 
         # Update Battle status and start time info
         cur.execute(
-            f"""UPDATE discussionbattle SET status=\'RUNNING\', startTime=NOW() WHERE battleid=\'{battle_id}\';""")
+            f"""UPDATE discussionbattle SET status='RUNNING', startTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;""")
 
         query_results = cur.fetchall()
-
+        conn.commit()
         cur.close()
         conn.close()
 
@@ -296,12 +298,143 @@ def start_battle(event, context):
 
 
 def end_battle(event, context):
-    pass
+    ENDPOINT = os.environ['POSTGRES_HOST']
+    PORT = os.environ['POSTGRES_PORT']
+    USER = os.environ['POSTGRES_USER']
+    DBNAME = os.environ['POSTGRES_DB']
+    PASSWORD = os.environ['POSTGRES_PASSWORD']
+
+    # Get URL path parameter: battleId
+    battle_id = event["pathParameters"]["battleId"]
+
+    try:
+        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
+                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
+        cur = conn.cursor()
+
+        # Update Battle status and start time info
+        cur.execute(
+            f"""UPDATE discussionbattle SET status='CLOSED', endTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;""")
+
+        query_results = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "Result": str(query_results)
+            })
+        }
+
+    except Exception as e:
+        print(e)
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "Error": str(e)
+            })
+        }
 
 
 def start_round(event, context):
-    pass
+    ENDPOINT = os.environ['POSTGRES_HOST']
+    PORT = os.environ['POSTGRES_PORT']
+    USER = os.environ['POSTGRES_USER']
+    DBNAME = os.environ['POSTGRES_DB']
+    PASSWORD = os.environ['POSTGRES_PASSWORD']
 
+    # Get URL path parameter: battleId
+    battle_id = event["pathParameters"]["battleId"]
+
+    try:
+        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
+                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
+        cur = conn.cursor()
+
+        # Update Discussion Battle current Round
+        cur.execute(f"""
+            UPDATE DiscussionBattle
+            SET currentRound = currentRound + 1
+            WHERE battleId = \'{battle_id}\' RETURNING *;
+         """)
+
+        # Update Round Starttime of round info
+        cur.execute(
+            f"""
+            UPDATE Round
+            SET startTime = NOW()
+            WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
+            RETURNING *;
+        """)
+
+        query_results = cur.fetchall()
+
+        # Apply the changes and Close the connection
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "Result": str(query_results)
+            })
+        }
+
+    except Exception as e:
+        print(e)
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "Error": str(e)
+            })
+        }
 
 def end_round(event, context):
-    pass
+    ENDPOINT = os.environ['POSTGRES_HOST']
+    PORT = os.environ['POSTGRES_PORT']
+    USER = os.environ['POSTGRES_USER']
+    DBNAME = os.environ['POSTGRES_DB']
+    PASSWORD = os.environ['POSTGRES_PASSWORD']
+
+    # Get URL path parameter: battleId
+    battle_id = event["pathParameters"]["battleId"]
+
+    try:
+        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
+                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
+        cur = conn.cursor()
+
+
+        # Update Round Starttime of round info
+        cur.execute(
+            f"""
+            UPDATE Round
+            SET endTime = NOW()
+            WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
+            RETURNING *;
+        """)
+
+        query_results = cur.fetchall()
+
+        # Apply the changes and Close the connection
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "Result": str(query_results)
+            })
+        }
+
+    except Exception as e:
+        print(e)
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "Error": str(e)
+            })
+        }

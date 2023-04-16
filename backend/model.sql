@@ -19,6 +19,7 @@ CREATE TABLE DiscussionBattle (
   endTime timestamp NULL,
   description varchar(100) NULL,
   maxNoOfRounds integer NOT NULL,
+  currentRound integer NOT NULL,
   maxNoOfVotes integer NOT NULL,
   maxNoOfOpinion integer NOT NULL,
   CONSTRAINT PK_DISCUSSION_BATTLE_ID PRIMARY KEY (battleId),
@@ -66,6 +67,9 @@ CREATE TABLE Support (
 );
 
 -- Insert Pseudo Data
+
+INSERT INTO "User" (userid, passwd, email, nickname, profile) VALUES (DEFAULT, 'passwd'::bytea, 'kookmin@gmail.com', 'kookmin', 'Hey Hey Hey');
+
 INSERT INTO DiscussionBattle(
   battleId,
   ownerId,
@@ -77,6 +81,7 @@ INSERT INTO DiscussionBattle(
   endTime,
   description,
   maxNoOfRounds,
+  currentRound,
   maxNoOfVotes,
   maxNoOfOpinion
 ) VALUES (
@@ -88,10 +93,9 @@ INSERT INTO DiscussionBattle(
   TRUE,
   NULL,
   NULL,
-  "Quick Game",
+  'Quick Game',
   3,
+  0,
   3,
   1000
 );
-
-INSERT INTO "User" (userid, passwd, email, nickname, profile) VALUES (DEFAULT, 'passwd'::bytea, 'kookmin@gmail.com', 'kookmin', 'Hey Hey Hey');

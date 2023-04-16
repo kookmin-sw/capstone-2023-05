@@ -127,7 +127,7 @@ functions:
     handler: src/lambda/handler.start_round
     events:
       - http:
-          path: /rounds/{roundId}/start
+          path: /battles/{battleId}/start_round
           method: PUT
           cors:
             origin: '*'
@@ -137,7 +137,7 @@ functions:
     handler: src/lambda/handler.end_round
     events:
       - http:
-          path: /rounds/{roundId}/end
+          path: /battles/{battleId}/end_round
           method: PUT
           cors:
             origin: '*'
