@@ -35,7 +35,6 @@ class PostgresContext:
             password=self.password,
             database=self.database
         )
-        self.cursor = self.client.cursor()
     
     def __del__(self):
         self.client.close()
