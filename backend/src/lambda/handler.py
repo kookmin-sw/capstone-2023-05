@@ -6,8 +6,11 @@ from datetime import datetime
 import boto3
 
 from src.game import app
+from src.game import config
+
 from src.utility.context import PostgresContext
 from src.utility.decorator import cors
+from src.utility.websocket import wsclient
 
 
 dynamo_db = boto3.client(**config.dynamo_db_config)
@@ -88,7 +91,8 @@ def disconnect_handler(event, context):
     }
 
 
-def init_join_handler(event, context):
+@wsclient
+def init_join_handler(event, context, wsclient):
     connection_id = event['requestContext']['connectionId']
 
     data = json.loads(event['body'])
@@ -117,13 +121,24 @@ def init_join_handler(event, context):
             rows = psql_cursor.fetchall()
             psql_cursor.close()
             team_names = [row for row in rows]
+    
+    wsclient.send_message(
+        connection_id=connection_id,
+        message=json.dumps({
             'message': 'Join Request Success',
             'teams': team_names
         })
+    )
+
+    response = {
+        'statusCode': 200,
+        'body': 'Join Request Success'
     }
+    return response
+    
 
-
-def send_handler(event, context):
+@wsclient
+def send_handler(event, context, wsclient):
     opinion_time = datetime.fromtimestamp(time.time())
     
     # DynamoDB의 모든 값을 얻어온다.
@@ -146,20 +161,15 @@ def send_handler(event, context):
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
     
-    apigatewaymanagementapi = boto3.client(
-        'apigatewaymanagementapi',
-        endpoint_url=f"https://{event['requestContext']['domainName']}/{event['requestContext']['stage']}"
-    )
-    
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
     opinion = json.loads(event['body'])['opinion']
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
-            apigatewaymanagementapi.post_to_connection(
-                Data=nickname + ": " + opinion,
-                ConnectionId=other_connection
+            wsclient.send_message(
+                connection_id=other_connection,
+                message=f"{nickname}: {opinion}",
             )
 
     # PK: userId, battleId, roundNo, time
@@ -174,7 +184,8 @@ def send_handler(event, context):
             psql_ctx.client.commit()
             psql_cursor.close()
 
-    return {
+    response = {
         'statusCode': 200,
-        'body': json.dumps({'message': "Post your opinion to your team"})
+        'body': 'Send Success'
     }
+    return response
