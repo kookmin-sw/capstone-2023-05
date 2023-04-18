@@ -24,6 +24,7 @@ provider:
     REDIS_HOST: ${ssm:/naruhodoo/${self:provider.stage}/redis/host, env:REDIS_HOST}
     REDIS_PORT: ${ssm:/naruhodoo/${self:provider.stage}/redis/port, env:REDIS_PORT}
     REDIS_DB: ${ssm:/naruhodoo/${self:provider.stage}/redis/db, env:REDIS_DB}
+    DYNAMODB_WS_CONNECTION_TABLE: ${ssm:/naruhodoo/${self:provider.stage}/dynamodb/ws_connection_table, env:DYNAMODB_WS_CONNECTION_TABLE}
   iam:
     role:
       statements:
