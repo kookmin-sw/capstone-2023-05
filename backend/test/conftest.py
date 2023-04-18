@@ -1,5 +1,3 @@
 import pytest
 
-
-def pytest_configure(config):
-    config.addinivalue_line("markers", "database: this test has database access.")
+# test 전체에 적용되는 configure, fixture, mock 등을 정의
