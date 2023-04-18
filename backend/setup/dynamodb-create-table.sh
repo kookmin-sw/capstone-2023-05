@@ -1,7 +1,7 @@
 #!/bin/bash
 
 aws dynamodb create-table \
-    --table-name ws-connection \
+    --table-name ws-connections \
     --attribute-definitions \
         AttributeName=battleID,AttributeType=S \
         AttributeName=connectionID,AttributeType=S \
