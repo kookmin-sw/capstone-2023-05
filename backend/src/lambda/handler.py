@@ -120,12 +120,12 @@ def init_join_handler(event, context, wsclient):
             psql_cursor.close()
             team_names = [row for row in rows]
     
-    wsclient.send_message(
+    wsclient.send(
         connection_id=connection_id,
-        message=json.dumps({
+        data={
             'message': 'Join Request Success',
             'teams': team_names
-        })
+        }
     )
 
     response = {
@@ -165,9 +165,11 @@ def send_handler(event, context, wsclient):
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
-            wsclient.send_message(
+            wsclient.send(
                 connection_id=other_connection,
-                message=f"{nickname}: {opinion}",
+                data={
+                    "data": f"{nickname}: {opinion}",
+                }
             )
 
     # PK: userId, battleId, roundNo, time

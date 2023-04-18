@@ -10,15 +10,19 @@ class WebSocketClient:
         self._api_endpoint = api_endpoint
         self._client = boto3.client('apigatewaymanagementapi', endpoint_url=self._api_endpoint)
 
-    def send_message(self, connection_id, message):
-        payload = {"message": message}
+    def send(self, connection_id, data):
         try:
             self._client.post_to_connection(
                 ConnectionId=connection_id,
-                Data=json.dumps(payload).encode('utf-8')
+                Data=json.dumps(data).encode('utf-8')
             )
         except:
             print(f"Failed to send message to connection {connection_id}")
+
+    def broadcast(self, connection_ids, payload):
+        for connection_id in connection_ids:
+            self.send(connection_id, payload)
+    
 
 
 def wsclient(func):
