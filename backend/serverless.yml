@@ -34,8 +34,9 @@ provider:
             - 'dynamodb:DeleteItem'
             - 'dynamodb:Scan'
             - 'dynamodb:GetItem'
-          Resource:
-            - 'arn:aws:dynamodb:ap-northeast-2:401482569934:table/websocket-connections-jwlee-test'
+          Resource:   #TODO: 사용하고 있는 테이블만 허용하도록 제한해야 함
+            - 'arn:aws:dynamodb:ap-northeast-2:401482569934:table/*'
+        
         - Effect: 'Allow'
           Action:
             - 'execute-api:ManageConnections'
