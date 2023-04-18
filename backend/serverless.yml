@@ -124,6 +124,9 @@ custom:
     dockerizePip: true  # Use docker to install dependencies for non-linux environments
     slim: true  # Slim down the size of the package by removing unneeded files
     cacheLocation: '.pip_cache'
+    noDeploy:
+      - pytest
+      - boto3
 
 
 plugins:
