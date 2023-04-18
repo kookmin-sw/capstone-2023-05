@@ -3,7 +3,6 @@ CREATE TYPE "opinion_status" AS ENUM ('CANDIDATE', 'PUBLISHED', 'DROPPED', 'REPO
 CREATE TABLE "User" (
   userId varchar(50) NOT NULL,
   passwd bytea NOT NULL,
-  email varchar(50) NOT NULL,
   nickname varchar(50) NOT NULL,
   profile varchar(50) NULL,
   CONSTRAINT PK_USER_ID PRIMARY KEY (userId)
