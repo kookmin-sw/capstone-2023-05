@@ -57,8 +57,6 @@ def hello_db(event, context):
 
 
 def connect_handler(event, context):
-    # 기존에 원스텝이었던 것을 투스텝으로 쪼개자.
-    # 여기서는 말 그대로 websocket 길만 뚫어준다.
     return {
         'statusCode': 200,
         'body': json.dumps({"message": "Connect Success"})
