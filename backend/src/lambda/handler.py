@@ -179,7 +179,7 @@ def send_handler(event, context, wsclient):
 
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, {opinion_time}, {num_of_likes}, \'{opinion}\', \'{status}\')'
+            insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
             psql_cursor.execute(insert_query)
             psql_ctx.client.commit()
             psql_cursor.close()
