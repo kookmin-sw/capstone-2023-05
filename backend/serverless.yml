@@ -32,11 +32,11 @@ package:
 
 functions:
   hello:
-    handler: src/lambda/handler.hello
+    handler: src/lambda/handler.create
     events:
       - http:
-          path: /hello
-          method: GET
+          path: /
+          method: POST
           cors:
             origin: '*'
             headers: '*'
@@ -70,7 +70,7 @@ functions:
           cors:
             origin: '*'
             headers: '*'
-  
+
   # Battle REST APIs
   create-battle:
     handler: src/lambda/handler.create_battle
