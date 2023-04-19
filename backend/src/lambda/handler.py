@@ -117,7 +117,6 @@ def init_join_handler(event, context, wsclient):
             select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\'"
             psql_cursor.execute(select_query)
             rows = psql_cursor.fetchall()
-            psql_cursor.close()
             team_names = [row for row in rows]
     
     wsclient.send(
@@ -181,8 +180,7 @@ def send_handler(event, context, wsclient):
         with psql_ctx.cursor() as psql_cursor:
             insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
             psql_cursor.execute(insert_query)
-            psql_ctx.client.commit()
-            psql_cursor.close()
+            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
