@@ -1,0 +1,33 @@
+diff --git a/node_modules/@artilleryio/int-core/lib/engine_ws.js b/node_modules/@artilleryio/int-core/lib/engine_ws.js
+index 1782c10..fe5338d 100644
+--- a/node_modules/@artilleryio/int-core/lib/engine_ws.js
++++ b/node_modules/@artilleryio/int-core/lib/engine_ws.js
+@@ -175,13 +175,21 @@ WSEngine.prototype.step = function (requestSpec, ee) {
+       // only process response if we're capturing
+       let timeout =
+         self.config.timeout || _.get(self.config, 'ws.timeout') || 10;
+-      context.ws.onmessage = getMessageHandler(
+-        context,
+-        params,
+-        ee,
+-        timeout,
+-        callback
+-      );
++
++      if (params.capture.handler !== undefined) {
++        context.ws.onmessage = (event) => {
++          const data = JSON.parse(event.data);
++          return self.config.processor[params.capture.handler](context, data, callback);
++        };
++      } else {
++        context.ws.onmessage = getMessageHandler(
++          context,
++          params,
++          ee,
++          timeout,
++          callback
++        );
++      }
+     } else {
+       // Reset onmessage to stop steps interfering with each other
+       context.ws.onmessage = undefined;

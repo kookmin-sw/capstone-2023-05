@@ -1,0 +1,2 @@
+﻿battleid,ownerid,title,status,visibility,switchchance,starttime,endtime,description,maxnoifrounds,maxnovotes,maxnoofopinion
+000001,a@example.com,First Battle,RUNNING,true,true,'2023-04-21 00:00:00','2023-04-22 00:00:00','This is the first battle',3,5,10

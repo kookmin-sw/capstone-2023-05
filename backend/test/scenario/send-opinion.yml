@@ -1,0 +1,107 @@
+config:
+  target: "ws://localhost:3001"
+  processor: "processor.js"
+  ws:
+    subprotocols:
+      - json
+  phases:
+    - duration: 0.1
+      arrivalCount: 10
+      name: multi user send opinion
+  payload:
+    -
+      name: "user"
+      path: "dummy/user.csv"
+      cast: false
+      skipHeader: true
+      order: sequence     #TODO: VU가 서로 다른 User 정보를 pick하도록 수정 필요
+      fields:
+        - "userId"
+        - "nickname"
+        - "teamId"
+    -
+      name: "battle"
+      path: "dummy/battle.csv"
+      cast: true
+      skipHeader: true
+      # order: sequence
+      fields:
+        - "battleid"
+        - "ownerid"
+        - "title"
+        - "status"
+        - "visibility"
+        - "switchchance"
+        - "starttime"
+        - "endtime"
+        - "description"
+        - "maxnoifrounds"
+        - "maxnovotes"
+        - "maxnoofopinion"
+    -
+      name: "opinion"
+      path: "dummy/opinion.csv"
+      cast: true
+      skipHeader: true
+      loadAll: true
+      fields:
+        - "round"
+        - "opinion"
+
+
+
+scenarios:
+  - engine: ws
+    name: send opinion
+
+    # beforeScenario:
+      # - "buildup_battle"
+
+    flow:
+      - log: "[Test::Websocket::$connect] {{ nickname }}"
+      - connect:
+          target: "{{ target }}"
+
+      - log: "[Test::Websocket::initJoin]"
+      - send:
+          payload: 
+              action: "initJoin"
+              battleId: "000001"
+              nickname: "{{ nickname }}"
+              userId: "{{ userId }}"
+              teamId: "1"
+
+          # Artillery에서는 send한 action에 대한 capture만 가능함
+          capture:
+            handler: "getTeams"
+
+      - log: "[Test::Websocket::getTeams] {{ teams }}"
+
+      - function: "selectTeam"      
+      - log: "[Test::Artillery::selectedTeam] {{ selectedTeam }}"
+      
+      - think: 1
+      
+      - loop:
+        # - function: "getRandomSleep"
+        # - think: "{{ randomAmount }}"
+        - function: "getRandomOpinion"
+        - send:
+            payload:
+              action: "sendOpinion"
+              opinion: "{{ opinion }}"
+              round: 1
+            
+            # Artillery에서는 send한 action에 대한 capture만 가능함
+            capture:
+              handler: "recvOpinion"
+        - log: "[Test::Websocket::recvOpinion] {{ other }}: {{ opinion }}"
+        count: 50
+      
+      - log: "[Test::Websocket::$disconnect]"
+    
+
+after:
+  flow:
+    - log: "[Test::Artillery::tearDown]"
+    - function: "tearDown"
