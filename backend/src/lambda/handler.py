@@ -168,7 +168,9 @@ def send_handler(event, context, wsclient):
             wsclient.send(
                 connection_id=other_connection,
                 data={
-                    "data": f"{nickname}: {opinion}",
+                    "action": "recvOpinion",
+                    "nickname": nickname,
+                    "opinion": opinion
                 }
             )
 
