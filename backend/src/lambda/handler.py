@@ -114,15 +114,16 @@ def init_join_handler(event, context, wsclient):
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\'"
+            select_query = f"SELECT teamid, name FROM team WHERE battleid = \'{battle_id}\'"
             psql_cursor.execute(select_query)
             rows = psql_cursor.fetchall()
-            team_names = [row for row in rows]
+            team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
     
     wsclient.send(
         connection_id=connection_id,
         data={
-            'message': 'Join Request Success',
+            'action': 'initJoinResult',
+            'result': 'success',
             'teams': team_names
         }
     )
