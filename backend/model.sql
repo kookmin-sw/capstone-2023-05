@@ -99,3 +99,44 @@ INSERT INTO DiscussionBattle(
   3,
   1000
 );
+
+INSERT INTO ROUND(
+  battleId,
+  roundNo,
+  startTime,
+  endTime
+) VALUES (
+  'ABC123',
+  1,
+  NULL,
+  NULL
+);
+
+INSERT INTO ROUND(
+  battleId,
+  roundNo,
+  startTime,
+  endTime
+) VALUES (
+  'ABC123',
+  2,
+  NULL,
+  NULL
+);
+
+INSERT INTO ROUND(
+  battleId,
+  roundNo,
+  startTime,
+  endTime
+) VALUES (
+  'ABC123',
+  3,
+  NULL,
+  NULL
+);
+
+
+
+  
+

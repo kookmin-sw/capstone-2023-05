@@ -46,12 +46,6 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits + string.a
 
 
 def create_battle(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
-
     body = json.loads(event['body'])
 
     battle_title = body['title']
@@ -60,25 +54,21 @@ def create_battle(event, context):
     team_name_b = body['teamNameB']
 
     try:
-        # Connect to RDS
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                battle_id = id_generator()
 
-        # Generate Random 6-length string
-        battle_id = id_generator()
+                # Checking Duplicate IDs
+                duplicate_check_query = f"""SELECT battleid from discussionbattle"""
+                psql_cursor.execute(duplicate_check_query)
+                query_result = psql_cursor.fetchall()
+                existing_battle_ids = [result[0] for result in query_result]
 
-        # Checks for battle_id duplicate
-        cur.execute("SELECT battleid from discussionbattle")
-        query_result = cur.fetchall()
+                while battle_id in existing_battle_ids:
+                    battle_id = id_generator()
 
-        battle_id_list = [result[0] for result in query_result]
-        while battle_id in battle_id_list:
-            battle_id = id_generator()
-
-        # Create Room
-        cur.execute(
-            f"""INSERT INTO DiscussionBattle(
+                # Create Battle
+                psql_cursor.execute(f"""INSERT INTO DiscussionBattle(
                     battleId,
                     ownerId,
                     title,
@@ -103,55 +93,50 @@ def create_battle(event, context):
                     null,
                     \'{body['description']}\',
                     \'{body['maxNoOfRounds']}\',
-                    0
+                    0,
                     \'{body['maxNoOfVotes']}\',
                     \'{body['maxNoOfOpinion']}\'
                 )
-            """
-        )
+                """)
 
-        # Create 2 Teams
-        for team_name in (team_name_a, team_name_b):
-            cur.execute(
-                f"""INSERT INTO Team(
-                        teamId,
-                        battleId,
-                        name,
-                        image
-                    ) VALUES (
-                        DEFAULT,
-                        \'{battle_id}\',
-                        \'{team_name}\',
-                        \'{"www.naver.com"}\'
+                # Create N Rounds
+                for round_no in range(1, body['maxNoOfRounds'] + 1):
+                    psql_cursor.execute(
+                        f"""
+                            INSERT INTO ROUND(
+                                battleId,
+                                roundNo,
+                                startTime,
+                                endTime,
+                                description
+                            ) VALUES (
+                                \'{battle_id}\',
+                                \'{round_no}\',
+                                null,
+                                null,
+                                \'{'description'}'
+                            )
+                        """
                     )
-                """
-            )
 
-        # Create N Rounds
-        for round_no in range(1, body['maxNoOfRounds'] + 1):
-            cur.execute(
-                f"""
-                    INSERT INTO ROUND(
-                        battleId,
-                        roundNo,
-                        startTime,
-                        endTime,
-                        description
-                    ) VALUES (
-                        \'{battle_id}\',
-                        \'{round_no}\',
-                        null,
-                        null,
-                        \'{'description'}'
+                # Create 2 Teams
+                for team_name in (team_name_a, team_name_b):
+                    psql_cursor.execute(
+                        f"""INSERT INTO Team(
+                                teamId,
+                                battleId,
+                                name,
+                                image
+                            ) VALUES (
+                                DEFAULT,
+                                \'{battle_id}\',
+                                \'{team_name}\',
+                                \'{"www.naver.com"}\'
+                            )
+                        """
                     )
-                """
-            )
 
-        # Apply the change & Close the Connection
-        conn.commit()
-        cur.close()
-        conn.close()
-
+                psql_ctx.commit()
         return {
             "statusCode": 200,
             "body": json.dumps({
@@ -161,16 +146,6 @@ def create_battle(event, context):
                         "battle_id": battle_id,
                         "battle_title": battle_title,
                     },
-                    "teams": [{"teamNameA": team_name_a,
-                               "teamIdA": "",
-                               "teamImageA": "www.naver.com"
-                               },
-                              {
-                        "teamNameB": team_name_b,
-                        "teamIdB": "",
-                        "teamImageB": "www.naver.com"
-                    }],
-                    "rounds": []
                 }
             })
         }
@@ -184,27 +159,17 @@ def create_battle(event, context):
 
 
 def get_battles(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
-
     try:
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
-
-        cur.execute("""select * from DiscussionBattle;""")
-        query_results = cur.fetchall()
-
-        cur.close()
-        conn.close()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                query = f"select * from DiscussionBattle;"
+                psql_cursor.execute(query)
+                rows = psql_cursor.fetchall()
 
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": str(query_results)
+                "Result": rows
             })
         }
     except Exception as e:
@@ -218,34 +183,21 @@ def get_battles(event, context):
 
 
 def get_battle(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
-
-    # Get URL path parameter: battleId
+   # Get URL path parameter: battleId
     battle_id = event["pathParameters"]["battleId"]
 
     try:
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
-
-        cur.execute(
-            f"""select * from DiscussionBattle where battleid=\'{battle_id}\';""")
-        query_results = cur.fetchall()
-
-        cur.close()
-        conn.close()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                query = f"""select * from DiscussionBattle where battleid=\'{battle_id}\'"""
+                psql_cursor.execute(query)
+                rows = psql_cursor.fetchall()
 
         return {
             "statusCode": 200,
-            "body": json.dumps({
-                "Result": str(query_results)
-            })
-        }
+            "body": json.dumps(rows, indent=4, default=str)
 
+        }
     except Exception as e:
         print(e)
         return {
@@ -257,36 +209,23 @@ def get_battle(event, context):
 
 
 def start_battle(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
-
     # Get URL path parameter: battleId
     battle_id = event["pathParameters"]["battleId"]
 
     try:
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
-
-        # Update Battle status and start time info
-        cur.execute(
-            f"""UPDATE discussionbattle SET status='RUNNING', startTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;""")
-
-        query_results = cur.fetchall()
-        conn.commit()
-        cur.close()
-        conn.close()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                query = f"""UPDATE discussionbattle SET status='RUNNING', startTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;"""
+                psql_cursor.execute(query)
+                rows = psql_cursor.fetchall()
+                psql_ctx.commit()
 
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": str(query_results)
+                "Result": json.dumps(rows, default=str)
             })
         }
-
     except Exception as e:
         print(e)
         return {
@@ -298,35 +237,23 @@ def start_battle(event, context):
 
 
 def end_battle(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
-
     # Get URL path parameter: battleId
     battle_id = event["pathParameters"]["battleId"]
 
     try:
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
-
-        # Update Battle status and start time info
-        cur.execute(
-            f"""UPDATE discussionbattle SET status='CLOSED', endTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;""")
-
-        query_results = cur.fetchall()
-        cur.close()
-        conn.close()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                query = f"""UPDATE discussionbattle SET status='CLOSED', endTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;"""
+                psql_cursor.execute(query)
+                rows = psql_cursor.fetchall()
+                psql_ctx.commit()
 
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": str(query_results)
+                "Result": str(rows)
             })
         }
-
     except Exception as e:
         print(e)
         return {
@@ -338,50 +265,35 @@ def end_battle(event, context):
 
 
 def start_round(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
-
     # Get URL path parameter: battleId
     battle_id = event["pathParameters"]["battleId"]
-
     try:
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                round_query = f"""
+                            UPDATE Round
+                            SET startTime = NOW()
+                            WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound+1 FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
+                            RETURNING *;
+                        """
+                battle_query = f"""
+                            Update DiscussionBattle
+                            SET currentRound = currentRound + 1
+                            WHERE battleId =\'{battle_id}\'
+                            RETURNING *;
+                """
+                psql_cursor.execute(round_query)
+                psql_cursor.execute(battle_query)
 
-        # Update Discussion Battle current Round
-        cur.execute(f"""
-            UPDATE DiscussionBattle
-            SET currentRound = currentRound + 1
-            WHERE battleId = \'{battle_id}\' RETURNING *;
-         """)
-
-        # Update Round Starttime of round info
-        cur.execute(
-            f"""
-            UPDATE Round
-            SET startTime = NOW()
-            WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
-            RETURNING *;
-        """)
-
-        query_results = cur.fetchall()
-
-        # Apply the changes and Close the connection
-        conn.commit()
-        cur.close()
-        conn.close()
+                rows = psql_cursor.fetchall()
+                psql_ctx.commit()
 
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": str(query_results)
+                "Result": str(rows)
             })
         }
-
     except Exception as e:
         print(e)
         return {
@@ -391,45 +303,30 @@ def start_round(event, context):
             })
         }
 
-def end_round(event, context):
-    ENDPOINT = os.environ['POSTGRES_HOST']
-    PORT = os.environ['POSTGRES_PORT']
-    USER = os.environ['POSTGRES_USER']
-    DBNAME = os.environ['POSTGRES_DB']
-    PASSWORD = os.environ['POSTGRES_PASSWORD']
 
+def end_round(event, context):
     # Get URL path parameter: battleId
     battle_id = event["pathParameters"]["battleId"]
-
     try:
-        conn = psycopg2.connect(host=ENDPOINT, port=PORT, database=DBNAME,
-                                user=USER, password=PASSWORD, sslrootcert="SSLCERTIFICATE")
-        cur = conn.cursor()
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                round_query = f"""
+                        UPDATE Round
+                        SET endTime = NOW()
+                        WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
+                        RETURNING *;
+                    """
+                psql_cursor.execute(round_query)
 
-
-        # Update Round Starttime of round info
-        cur.execute(
-            f"""
-            UPDATE Round
-            SET endTime = NOW()
-            WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
-            RETURNING *;
-        """)
-
-        query_results = cur.fetchall()
-
-        # Apply the changes and Close the connection
-        conn.commit()
-        cur.close()
-        conn.close()
+                rows = psql_cursor.fetchall()
+                psql_ctx.commit()
 
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": str(query_results)
+                "Result": str(rows)
             })
         }
-
     except Exception as e:
         print(e)
         return {
