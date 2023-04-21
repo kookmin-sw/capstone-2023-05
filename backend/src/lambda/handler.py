@@ -90,7 +90,7 @@ def end_battle(event, context):
 def start_round(event, context):
     """
         HTTP METHOD: PUT
-        Starts Round 
+        Starts Round and set round status as RUNNING
     """
     return app.start_round(event, context)
 
@@ -98,7 +98,7 @@ def start_round(event, context):
 def end_round(event, context):
     """
         HTTP METHOD: PUT
-        Ends Round 
+        Ends Round and set round status as RUNNING
     """
     return app.end_round(event, context)
 
