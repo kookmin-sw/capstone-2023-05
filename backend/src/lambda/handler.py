@@ -197,8 +197,16 @@ def init_join_handler(event, context, wsclient):
 
     except Exception as e:
         print(e)
+        connection_id = event['requestContext']['connectionId']
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "error": e
+            }
+        )
         return {
-            "error": e
+            'statusCode': 400,
+            "body": str(e)
         }
 
     return response
