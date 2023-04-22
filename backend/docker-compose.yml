@@ -27,6 +27,18 @@ services:
       - ./model.sql:/docker-entrypoint-initdb.d/model.sql
     networks:
         - backend
+  
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb
+    restart: always
+    ports:
+      - 8000:8000
+    volumes:
+      - ./volumes/dynamodb-data:/data
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    networks:
+        - backend
 
 networks:
     backend:

@@ -13,3 +13,10 @@ db_config = {
     "password": os.getenv("POSTGRES_PASSWORD"),
     "database": os.getenv("POSTGRES_DB")
 }
+
+dynamo_db_config = {
+    "service_name": "dynamodb",
+    "endpoint_url": os.getenv("DYNAMODB_ENDPOINT") if os.getenv("IS_OFFLINE") == "true" else None,
+}
+
+DYNAMODB_WS_CONNECTION_TABLE = os.getenv("DYNAMODB_WS_CONNECTION_TABLE")
