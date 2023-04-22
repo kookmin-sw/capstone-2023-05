@@ -154,13 +154,22 @@ def create_battle(event, context):
         }
 
 
-def get_battles(event, context):
+def get_battles(event, context, wsclient):
     try:
+        connection_id = event['requestContext']['connectionId']
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 query = f"select * from DiscussionBattle;"
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
+        
+        wsclient.send(
+            connection_id = connection_id,
+            data={
+                'message': 'Request Success',
+                'battles': rows
+            }
+        )
 
         return {
             "statusCode": 200,
@@ -189,6 +198,7 @@ def get_battle(event, context):
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
 
+        
         return {
             "statusCode": 200,
             "body": json.dumps(rows, indent=4, default=str)

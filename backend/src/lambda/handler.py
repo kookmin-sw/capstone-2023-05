@@ -62,14 +62,14 @@ def create_battle(event, context):
     """
     return app.create_battle(event, context)
 
-
 @cors
-def get_battles(event, context):
+@wsclient
+def get_battles(event, context, wsclient):
     """
         HTTP Method: GET
         Get all the battles info
     """
-    return app.get_battles(event, context)
+    return app.get_battles(event, context, wsclient)
 
 
 @cors

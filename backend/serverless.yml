@@ -181,6 +181,11 @@ functions:
     events:
       - websocket:
           route: sendOpinion
+  get-battles-handler:
+    handler: src/lambda/handler.get_battles
+    events:
+      - websocket:
+          route: getBattles
 
 custom:
   customDomain:
