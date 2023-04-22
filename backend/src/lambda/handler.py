@@ -13,9 +13,7 @@ from src.utility.context import PostgresContext
 from src.utility.decorator import cors
 from src.utility.websocket import wsclient
 
-
 dynamo_db = boto3.client(**config.dynamo_db_config)
-
 
 @cors
 def hello(event, context):
@@ -25,7 +23,6 @@ def hello(event, context):
         "body": msg
     }
     return response
-
 
 @cors
 def get_platform(event, context):
@@ -156,46 +153,54 @@ def disconnect_handler(event, context):
 
 @wsclient
 def init_join_handler(event, context, wsclient):
-    connection_id = event['requestContext']['connectionId']
+    try:
+        connection_id = event['requestContext']['connectionId']
 
-    data = json.loads(event['body'])
-    battle_id = data['battleId']
-    nickname = data['nickname']
-    user_id = data['userId']
-    team_id = ""
+        data = json.loads(event['body'])
+        battle_id = data['battleId']
+        nickname = data['nickname']
+        user_id = data['userId']
+        team_id = ""
 
-    # DynamoDB에 정보 등록
-    dynamo_db.put_item(
-        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
-        Item={
-            'connectionID': {'S': connection_id},
-            'battleID': {'S': battle_id},
-            'teamID': {'S': team_id},
-            'userID': {'S': user_id},
-            'nickname': {'S': nickname}
+        # DynamoDB에 정보 등록
+        dynamo_db.put_item(
+            TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+            Item={
+                'connectionID': {'S': connection_id},
+                'battleID': {'S': battle_id},
+                'teamID': {'S': team_id},
+                'userID': {'S': user_id},
+                'nickname': {'S': nickname}
+            }
+        )
+
+        # 어떤 팀이 있는지 RDS에서 정보 가져오기
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\'"
+                psql_cursor.execute(select_query)
+                rows = psql_cursor.fetchall()
+                team_names = [row for row in rows]
+
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Join Request Success',
+                'teams': team_names
+            }
+        )
+
+        response = {
+            'statusCode': 200,
+            'body': 'Join Request Success'
         }
-    )
 
-    # 어떤 팀이 있는지 RDS에서 정보 가져오기
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\'"
-            psql_cursor.execute(select_query)
-            rows = psql_cursor.fetchall()
-            team_names = [row for row in rows]
-
-    wsclient.send(
-        connection_id=connection_id,
-        data={
-            'message': 'Join Request Success',
-            'teams': team_names
+    except Exception as e:
+        print(e)
+        return {
+            "error": e
         }
-    )
 
-    response = {
-        'statusCode': 200,
-        'body': 'Join Request Success'
-    }
     return response
 
 

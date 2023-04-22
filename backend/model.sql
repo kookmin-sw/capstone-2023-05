@@ -85,7 +85,7 @@ INSERT INTO DiscussionBattle(
   maxNoOfVotes,
   maxNoOfOpinion
 ) VALUES (
-  'ABC123',
+  '000001',
   1,
   'Peach vs Apple',
   'BEFORE_OPEN',
@@ -106,7 +106,7 @@ INSERT INTO ROUND(
   startTime,
   endTime
 ) VALUES (
-  'ABC123',
+  '000001',
   1,
   NULL,
   NULL
@@ -118,7 +118,7 @@ INSERT INTO ROUND(
   startTime,
   endTime
 ) VALUES (
-  'ABC123',
+  '000001',
   2,
   NULL,
   NULL
@@ -130,11 +130,13 @@ INSERT INTO ROUND(
   startTime,
   endTime
 ) VALUES (
-  'ABC123',
+  '000001',
   3,
   NULL,
   NULL
 );
+
+
 
 
 

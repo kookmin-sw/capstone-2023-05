@@ -2,10 +2,6 @@ import json
 
 from src.utility.context import PostgresContext, RedisContext
 from src.game.config import redis_config, db_config
-
-import json
-import psycopg2
-import os
 import random
 import string
 
