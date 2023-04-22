@@ -67,7 +67,7 @@ const ChatComponent = (props) => {
   
   // 메시지 전송 이벤트 핸들러
   functionRef.current = () => {
-    console.log('qwwrq2rqweafadsc');
+    // console.log('qwwrq2rqweafadsc');
     socket.send(JSON.stringify({'action':'sendOpinion', 'round': round, 'opinion': message})); // 서버로 메시지 전송
     console.log(`Message: ${message}  Sent`);
     setMessage(''); // 메시지 입력 필드 초기화
