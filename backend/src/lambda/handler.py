@@ -1,6 +1,5 @@
 import json
 import platform
-import os
 import time
 from datetime import datetime
 import boto3
@@ -190,3 +189,65 @@ def send_handler(event, context, wsclient):
         'body': 'Send Success'
     }
     return response
+
+
+@wsclient
+def vote_handler(event, context, wsclient):
+    vote_time = datetime.fromtimestamp(time.time())
+    connection_id = event['requestContext']['connectionId']
+
+    # DynamoDB에서 유저 정보 찾기
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="connectionID = :connection_id",
+        ExpressionAttributeValues={":connection_id": {"S": connection_id}},
+        ProjectionExpression="battleID,connectionID,nickname,userID"
+    )['Items']
+    battle_id, user_id, nickname = response[0]['battleID']['S'], response[0]['userID']['S'], response[0]['nickname']['S']
+    team_id = json.loads(event['body'])['teamId']
+
+    # DynamoDB에 팀 선택 결과 반영
+    dynamo_db.put_item(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        Item={
+            'connectionID': {'S': connection_id},
+            'battleID': {'S': battle_id},
+            'teamID': {'S': str(team_id)},
+            'userID': {'S': user_id},
+            'nickname': {'S': nickname}
+        }
+    )
+
+    # 팀 이름을 찾기 위한 SQL문 실행
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\' and teamid = \'{team_id}\'"
+            psql_cursor.execute(select_query)
+            row = psql_cursor.fetchall()
+            team_name = row[0][0]
+
+    # 팀 선택 결과 전송
+    wsclient.send(
+        connection_id=connection_id,
+        data={
+            "action": "voteResult",
+            "result": "success",
+            "teamId": team_id,
+            "teamName": team_name
+        }
+    )
+    
+    # Support 테이블에 팀 선택 기록 저장
+    round = json.loads(event['body'])['round']
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            insert_query = f'INSERT INTO Support VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+            psql_cursor.execute(insert_query)
+            psql_ctx.commit()
+
+    response = {
+        'statusCode': 200,
+        'body': 'Vote Success'
+    }
+    return response
+
