@@ -55,22 +55,14 @@ def hello_db(event, context):
 
 
 @cors
-def create_battle(event, context):
-    """
-        HTTP Method: POST
-        Creates new battle
-    """
-    return app.create_battle(event, context)
+@wsclient
+def create_battle(event, context, wsclient):
+    return app.create_battle(event, context, wsclient)
 
 @cors
 @wsclient
 def get_battles(event, context, wsclient):
-    """
-        HTTP Method: GET
-        Get all the battles info
-    """
     return app.get_battles(event, context, wsclient)
-
 
 @cors
 def get_battle(event, context):

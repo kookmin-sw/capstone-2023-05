@@ -41,13 +41,16 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits + string.a
     return ''.join(random.choice(chars) for _ in range(size))
 
 
-def create_battle(event, context):
+def create_battle(event, context, wsclient):
     body = json.loads(event['body'])
+
+    connection_id = event['requestContext']['connectionId']
 
     battle_title = body['title']
 
     team_name_a = body['teamNameA']
     team_name_b = body['teamNameB']
+
 
     try:
         with PostgresContext(**db_config) as psql_ctx:
@@ -75,12 +78,11 @@ def create_battle(event, context):
                     endTime,
                     description,
                     maxNoOfRounds,
-                    currentRound,
                     maxNoOfVotes,
                     maxNoOfOpinion
                 ) VALUES (
                     \'{battle_id}\',
-                    \'{1}\',
+                    \'{body['ownerId']}\',
                     \'{body['title']}\',
                     \'BEFORE_OPEN\',
                     \'{body['visibility']}\',
@@ -88,7 +90,6 @@ def create_battle(event, context):
                     null,
                     null,
                     \'{body['description']}\',
-                    \'{body['maxNoOfRounds']}\',
                     0,
                     \'{body['maxNoOfVotes']}\',
                     \'{body['maxNoOfOpinion']}\'
@@ -133,6 +134,17 @@ def create_battle(event, context):
                     )
 
                 psql_ctx.commit()
+
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Battle Creation Success',
+                'data': {
+                    "battle_id": battle_id,
+                    "battle_title": battle_title,
+                }
+            }
+        )
         return {
             "statusCode": 200,
             "body": json.dumps({
@@ -146,6 +158,15 @@ def create_battle(event, context):
             })
         }
     except Exception as e:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Failed',
+                'data': {
+                    "e": str(e)
+                }
+            }
+        )
         return {
             "statusCode": 400,
             "body": json.dumps({
@@ -162,9 +183,9 @@ def get_battles(event, context, wsclient):
                 query = f"select * from DiscussionBattle;"
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
-        
+
         wsclient.send(
-            connection_id = connection_id,
+            connection_id=connection_id,
             data={
                 'message': 'Request Success',
                 'battles': rows
@@ -198,7 +219,6 @@ def get_battle(event, context):
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
 
-        
         return {
             "statusCode": 200,
             "body": json.dumps(rows, indent=4, default=str)
