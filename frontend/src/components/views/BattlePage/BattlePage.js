@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import InGameNavBar from '../NavBar/InGameNavBar'
-import CardComponent from '../../cardView/CardComponent'
+import CardComponent from '../cardView/CardComponent'
 
 const ChatComponent = (props) => {
   const [message, setMessage] = useState('');
