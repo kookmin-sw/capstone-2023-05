@@ -9,13 +9,13 @@ const ChatComponent = (props) => {
   const functionRef = useRef(null);
 
   let battleId;
-  let email;
+  let userId;
   let nickname;
   let round;
 
   let recvData;
   // const battleId = '1234';
-  // const email = 'example@gmail.com'
+  // const userId = 'example@gmail.com'
   // const nickname = 'nick'
   // let round = 1;
 
@@ -31,7 +31,7 @@ const ChatComponent = (props) => {
       socket.send(JSON.stringify({
         'action': 'initJoin', 
         'battleId': battleId, 
-        'userId': email, 
+        'userId': userId, 
         'nickname': nickname}));
       // socket.send('안녕하세요, 서버에게 메시지를 보냅니다!');
       console.log('sent');
