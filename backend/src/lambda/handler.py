@@ -250,4 +250,3 @@ def vote_handler(event, context, wsclient):
         'body': 'Vote Success'
     }
     return response
-
