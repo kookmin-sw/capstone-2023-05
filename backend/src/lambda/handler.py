@@ -7,6 +7,7 @@ import boto3
 
 from src.game import app
 from src.game import config
+from src.utility.decorator import cors
 
 from src.utility.context import PostgresContext
 from src.utility.decorator import cors
