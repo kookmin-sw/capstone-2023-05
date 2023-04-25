@@ -89,77 +89,6 @@ functions:
                       origin: "*"
                       headers: "*"
 
-    # Battle REST APIs
-    create-battle:
-        handler: src/lambda/handler.create_battle
-        events:
-            - http:
-                  path: /battles
-                  method: POST
-                  cors:
-                      origin: "*"
-                      headers: "*"
-
-    get-battles:
-        handler: src/lambda/handler.get_battles
-        events:
-            - http:
-                  path: /battles
-                  method: GET
-                  cors:
-                      origin: "*"
-                      headers: "*"
-
-    get-battle:
-        handler: src/lambda/handler.get_battle
-        events:
-            - http:
-                  path: /battles/{battleId}
-                  method: GET
-                  cors:
-                      origin: "*"
-                      headers: "*"
-
-    start-battle:
-        handler: src/lambda/handler.start_battle
-        events:
-            - http:
-                  path: /battles/{battleId}/start
-                  method: PUT
-                  cors:
-                      origin: "*"
-                      headers: "*"
-
-    end-battle:
-        handler: src/lambda/handler.end_battle
-        events:
-            - http:
-                  path: /battles/{battleId}/end
-                  method: PUT
-                  cors:
-                      origin: "*"
-                      headers: "*"
-
-    # Round REST APIs
-    start-round:
-        handler: src/lambda/handler.start_round
-        events:
-            - http:
-                  path: /battles/{battleId}/start_round
-                  method: PUT
-                  cors:
-                      origin: "*"
-                      headers: "*"
-
-    end-round:
-        handler: src/lambda/handler.end_round
-        events:
-            - http:
-                  path: /battles/{battleId}/end_round
-                  method: PUT
-                  cors:
-                      origin: "*"
-                      headers: "*"
 
     connect-handler:
         handler: src/lambda/handler.connect_handler
@@ -191,6 +120,31 @@ functions:
         events:
             - websocket:
                   route: createBattle
+    get-battle-handler:
+        handler: src/lambda/handler.get_battle
+        events:
+            - websocket:
+                  route: getBattle
+    start-battle-handler:
+        handler: src/lambda/handler.start_battle
+        events:
+            - websocket:
+                  route: startBattle
+    end-battle-handler:
+        handler: src/lambda/handler.end_battle
+        events:
+            - websocket:
+                  route: endBattle
+    start-round-handler:
+        handler: src/lambda/handler.start_round
+        events:
+            - websocket:
+                  route: startRound
+    end-round-handler:
+        handler: src/lambda/handler.end_round
+        events:
+            - websocket:
+                  route: endRound
 
 custom:
     customDomain:

@@ -65,49 +65,33 @@ def get_battles(event, context, wsclient):
     return app.get_battles(event, context, wsclient)
 
 @cors
-def get_battle(event, context):
-    """
-        HTTP Method: PUT
-        Update battle
-    """
-    return app.get_battle(event, context)
+@wsclient
+def get_battle(event, context, wsclient):
+    return app.get_battle(event, context, wsclient)
 
 
 @cors
-def start_battle(event, context):
-    """
-        HTTP Method: PUT
-
-        Starts Battle and sets battle status as RUNNING
-    """
-    return app.start_battle(event, context)
+@wsclient
+def start_battle(event, context, wsclient):
+    return app.start_battle(event, context, wsclient)
 
 
 @cors
-def end_battle(event, context):
-    """
-        HTTP METHOD: PUT
-        Ends Battle and sets battle status as CLOSED
-    """
-    return app.end_battle(event, context)
+@wsclient
+def end_battle(event, context, wsclient):
+    return app.end_battle(event, context, wsclient)
 
 
 @cors
-def start_round(event, context):
-    """
-        HTTP METHOD: PUT
-        Starts Round and set round status as RUNNING
-    """
-    return app.start_round(event, context)
+@wsclient
+def start_round(event, context, wsclient):
+    return app.start_round(event, context, wsclient)
 
 
 @cors
-def end_round(event, context):
-    """
-        HTTP METHOD: PUT
-        Ends Round and set round status as RUNNING
-    """
-    return app.end_round(event, context)
+@wsclient
+def end_round(event, context, wsclient):
+    return app.end_round(event, context, wsclient)
 
 
 def connect_handler(event, context):
@@ -223,6 +207,12 @@ def send_handler(event, context, wsclient):
             my_info = connection
             break
     if my_info is None:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "data": "You should Join a battle first"
+            }
+        )
         return {
             'statusCode': 404,
             'body': json.dumps({'message': "Cannot find your connection information"})

@@ -51,7 +51,6 @@ def create_battle(event, context, wsclient):
     team_name_a = body['teamNameA']
     team_name_b = body['teamNameB']
 
-
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
@@ -176,11 +175,57 @@ def create_battle(event, context, wsclient):
 
 
 def get_battles(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
     try:
-        connection_id = event['requestContext']['connectionId']
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 query = f"select * from DiscussionBattle;"
+                psql_cursor.execute(query)
+                rows = psql_cursor.fetchall()
+                print(rows)
+        result = json.dumps(rows, default=str)
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Success',
+                'battles': result
+            }
+        )
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "Result": result
+            })
+        }
+    except Exception as e:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Failed',
+                'data': {
+                    "e": str(e)
+                }
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "Error": json.dumps(e)
+            })
+        }
+
+
+def get_battle(event, context, wsclient):
+   # Get URL path parameter: battleId
+    body = json.loads(event['body'])
+    battle_id = body['battleId']
+    connection_id = event['requestContext']['connectionId']
+
+    try:
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                query = f"""select * from DiscussionBattle where battleid=\'{battle_id}\'"""
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
 
@@ -194,38 +239,18 @@ def get_battles(event, context, wsclient):
 
         return {
             "statusCode": 200,
-            "body": json.dumps({
-                "Result": rows
-            })
-        }
-    except Exception as e:
-        print(e)
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "Error": str(e)
-            })
-        }
-
-
-def get_battle(event, context):
-   # Get URL path parameter: battleId
-    battle_id = event["pathParameters"]["battleId"]
-
-    try:
-        with PostgresContext(**db_config) as psql_ctx:
-            with psql_ctx.cursor() as psql_cursor:
-                query = f"""select * from DiscussionBattle where battleid=\'{battle_id}\'"""
-                psql_cursor.execute(query)
-                rows = psql_cursor.fetchall()
-
-        return {
-            "statusCode": 200,
             "body": json.dumps(rows, indent=4, default=str)
-
         }
     except Exception as e:
-        print(e)
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Failed',
+                'data': {
+                    "e": str(e)
+                }
+            }
+        )
         return {
             "statusCode": 400,
             "body": json.dumps({
@@ -234,9 +259,11 @@ def get_battle(event, context):
         }
 
 
-def start_battle(event, context):
+def start_battle(event, context, wsclient):
     # Get URL path parameter: battleId
-    battle_id = event["pathParameters"]["battleId"]
+    body = json.loads(event['body'])
+    battle_id = body['battleId']
+    connection_id = event['requestContext']['connectionId']
 
     try:
         with PostgresContext(**db_config) as psql_ctx:
@@ -246,6 +273,16 @@ def start_battle(event, context):
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
 
+        result = json.dumps(rows, default=str)
+
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Success',
+                'battles': result
+            }
+        )
+
         return {
             "statusCode": 200,
             "body": json.dumps({
@@ -253,6 +290,15 @@ def start_battle(event, context):
             })
         }
     except Exception as e:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Failed',
+                'data': {
+                    "e": str(e)
+                }
+            }
+        )
         print(e)
         return {
             "statusCode": 400,
@@ -262,9 +308,11 @@ def start_battle(event, context):
         }
 
 
-def end_battle(event, context):
+def end_battle(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
     # Get URL path parameter: battleId
-    battle_id = event["pathParameters"]["battleId"]
+    body = json.loads(event['body'])
+    battle_id = body['battleId']
 
     try:
         with PostgresContext(**db_config) as psql_ctx:
@@ -273,6 +321,15 @@ def end_battle(event, context):
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
+        result = json.dumps(rows, default=str)
+
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Success',
+                'battles': result
+            }
+        )
 
         return {
             "statusCode": 200,
@@ -281,7 +338,16 @@ def end_battle(event, context):
             })
         }
     except Exception as e:
-        print(e)
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Failed',
+                'data': {
+                    "e": str(e)
+                }
+            }
+        )
+
         return {
             "statusCode": 400,
             "body": json.dumps({
@@ -290,38 +356,48 @@ def end_battle(event, context):
         }
 
 
-def start_round(event, context):
-    # Get URL path parameter: battleId
-    battle_id = event["pathParameters"]["battleId"]
+def start_round(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
+    body = json.loads(event['body'])
+    battle_id = body['battleId']
+    current_round = body['currentRound']
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 round_query = f"""
                             UPDATE Round
                             SET startTime = NOW()
-                            WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound+1 FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
+                            WHERE battleId = \'{battle_id}\' AND roundNo = {current_round}
                             RETURNING *;
                         """
-                battle_query = f"""
-                            Update DiscussionBattle
-                            SET currentRound = currentRound + 1
-                            WHERE battleId =\'{battle_id}\'
-                            RETURNING *;
-                """
                 psql_cursor.execute(round_query)
-                psql_cursor.execute(battle_query)
 
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
+        result = json.dumps(rows, default=str)
+
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Success',
+                'Result': result
+            }
+        )
 
         return {
             "statusCode": 200,
             "body": json.dumps({
-                "Result": str(rows)
+                "Result": result
             })
         }
     except Exception as e:
-        print(e)
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Failed',
+                'Result': str(e) 
+            }
+        )
         return {
             "statusCode": 400,
             "body": json.dumps({
@@ -330,22 +406,33 @@ def start_round(event, context):
         }
 
 
-def end_round(event, context):
-    # Get URL path parameter: battleId
-    battle_id = event["pathParameters"]["battleId"]
+def end_round(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
+    body = json.loads(event['body'])
+    battle_id = body['battleId']
+    current_round = body['currentRound']
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 round_query = f"""
                         UPDATE Round
                         SET endTime = NOW()
-                        WHERE battleId = \'{battle_id}\' AND roundNO = (SELECT currentRound FROM DiscussionBattle WHERE battleId = \'{battle_id}\')
+                        WHERE battleId = \'{battle_id}\' AND roundNo = \'{current_round}\'
                         RETURNING *;
                     """
                 psql_cursor.execute(round_query)
 
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
+        result = json.dumps(rows, default=str)
+
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Success',
+                'Result': result
+            }
+        )
 
         return {
             "statusCode": 200,
@@ -354,7 +441,14 @@ def end_round(event, context):
             })
         }
     except Exception as e:
-        print(e)
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                'message': 'Request Failed',
+                'Result': str(e) 
+            }
+        )
+
         return {
             "statusCode": 400,
             "body": json.dumps({
