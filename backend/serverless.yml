@@ -109,6 +109,11 @@ functions:
     events:
       - websocket:
           route: sendOpinion
+  vote-handler:
+    handler: src/lambda/handler.vote_handler
+    events:
+      - websocket:
+          route: vote
 
 custom:
   customDomain:
