@@ -24,6 +24,24 @@ provider:
     REDIS_HOST: ${ssm:/naruhodoo/${self:provider.stage}/redis/host, env:REDIS_HOST}
     REDIS_PORT: ${ssm:/naruhodoo/${self:provider.stage}/redis/port, env:REDIS_PORT}
     REDIS_DB: ${ssm:/naruhodoo/${self:provider.stage}/redis/db, env:REDIS_DB}
+    DYNAMODB_WS_CONNECTION_TABLE: ${ssm:/naruhodoo/${self:provider.stage}/dynamodb/ws_connection_table, env:DYNAMODB_WS_CONNECTION_TABLE}
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - 'dynamodb:PutItem'
+            - 'dynamodb:DeleteItem'
+            - 'dynamodb:Scan'
+            - 'dynamodb:GetItem'
+          Resource:   #TODO: 사용하고 있는 테이블만 허용하도록 제한해야 함
+            - 'arn:aws:dynamodb:ap-northeast-2:401482569934:table/*'
+        
+        - Effect: 'Allow'
+          Action:
+            - 'execute-api:ManageConnections'
+          Resource:
+            - 'arn:aws:execute-api:ap-northeast-2:401482569934:*/*/*/*'
 
 package:
   patterns:
@@ -37,24 +55,65 @@ functions:
       - http:
           path: /hello
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+
   platform:
     handler: src/lambda/handler.get_platform
     events:
       - http:
           path: /platform
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+          
   hello-redis:
     handler: src/lambda/handler.hello_redis
     events:
       - http:
           path: /hello-redis
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+
   hello-db:
     handler: src/lambda/handler.hello_db
     events:
       - http:
           path: /hello-db
           method: get
+          cors:
+            origin: '*'
+            headers: '*'
+
+  connect-handler:
+    handler: src/lambda/handler.connect_handler
+    events:
+      - websocket:
+          route: $connect
+  disconnect-handler:
+    handler: src/lambda/handler.disconnect_handler
+    events:
+      - websocket:
+          route: $disconnect
+  init-join-handler:
+    handler: src/lambda/handler.init_join_handler
+    events:
+      - websocket:
+          route: initJoin
+  send-handler:
+    handler: src/lambda/handler.send_handler
+    events:
+      - websocket:
+          route: sendOpinion
+  vote-handler:
+    handler: src/lambda/handler.vote_handler
+    events:
+      - websocket:
+          route: vote
 
 custom:
   customDomain:
@@ -65,6 +124,12 @@ custom:
     createRoute53Record: true
   pythonRequirements:
     dockerizePip: true  # Use docker to install dependencies for non-linux environments
+    slim: true  # Slim down the size of the package by removing unneeded files
+    cacheLocation: '.pip_cache'
+    noDeploy:
+      - pytest
+      - boto3
+
 
 plugins:
   - serverless-python-requirements
