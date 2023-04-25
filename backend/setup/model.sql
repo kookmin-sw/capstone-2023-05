@@ -65,25 +65,26 @@ CREATE TABLE Support (
   CONSTRAINT FK_7 FOREIGN KEY (battleId, roundNo) REFERENCES Round (battleId, roundNo)
 );
 
+-- Local Testing Dummy Data
 
-INSERT INTO "User" (userId, passwd, nickname, profile) 
-VALUES ('poream3387@gmail.com', 'password', 'poream', 'www.naver.com');
+-- INSERT INTO "User" (userId, passwd, nickname, profile) 
+-- VALUES ('newuser@gmail.com', 'password', 'abc', 'www.naver.com');
 
-INSERT INTO DiscussionBattle(battleId, ownerId, title, status, visibility, switchChance, startTime, endTime, description, maxNoOfRounds, maxNoOfVotes, maxNoOfOpinion)
-VALUES('000001', 'poream3387@gmail.com', 'Door Vs Wheel', 'BEFORE_OPEN', TRUE, TRUE, NULL, NULL, 'Testing Battle Description', 3, 3, 3);
+-- INSERT INTO DiscussionBattle(battleId, ownerId, title, status, visibility, switchChance, startTime, endTime, description, maxNoOfRounds, maxNoOfVotes, maxNoOfOpinion)
+-- VALUES('000001', 'newuser@gmail.com', 'Door Vs Wheel', 'BEFORE_OPEN', TRUE, TRUE, NULL, NULL, 'Testing Battle Description', 3, 3, 3);
 
-INSERT INTO Team(teamId, battleId, name, image)
-VALUES(DEFAULT, '000001', 'Door', 'www.image.com');
+-- INSERT INTO Team(teamId, battleId, name, image)
+-- VALUES(DEFAULT, '000001', 'Door', 'www.image.com');
 
-INSERT INTO Team(teamId, battleId, name, image)
-VALUES(DEFAULT, '000001', 'Wheel', 'www.image.com');
+-- INSERT INTO Team(teamId, battleId, name, image)
+-- VALUES(DEFAULT, '000001', 'Wheel', 'www.image.com');
 
-Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
-VALUES('000001', 1, NULL, NULL, NULL);
+-- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
+-- VALUES('000001', 1, NULL, NULL, NULL);
 
-Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
-VALUES('000001', 2, NULL, NULL, NULL);
+-- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
+-- VALUES('000001', 2, NULL, NULL, NULL);
 
-Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
-VALUES('000001', 3, NULL, NULL, NULL);
+-- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
+-- VALUES('000001', 3, NULL, NULL, NULL);
 
