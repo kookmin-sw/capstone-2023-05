@@ -253,7 +253,19 @@ def vote_handler(event, context, wsclient):
 
 
 @wsclient
-def get_new_ads(event, context):
+def get_new_ads(event, context, wsclient):
+    curr_time = datetime.fromtimestamp(time.time())
+    my_battle_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['round']
+
+    # 라운드 시작 시간을 얻어서 Refresh 주기를 계산
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            select_query = f'SELECT starttime from Round WHERE battleid = \'{my_battle_id}\' and roundno = {curr_round}'
+            psql_cursor.execute(select_query)
+            row = psql_cursor.fetchall()
+            round_start_time = row[0][0]
+    refresh_term = curr_time - round_start_time
+
     response = {
         'stautsCode': 200,
         'body': 'Getting New Ads Success'
