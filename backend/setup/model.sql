@@ -71,20 +71,20 @@ CREATE TABLE Support (
 -- VALUES ('newuser@gmail.com', 'password', 'abc', 'www.naver.com');
 
 -- INSERT INTO DiscussionBattle(battleId, ownerId, title, status, visibility, switchChance, startTime, endTime, description, maxNoOfRounds, maxNoOfVotes, maxNoOfOpinion)
--- VALUES('000001', 'newuser@gmail.com', 'Door Vs Wheel', 'BEFORE_OPEN', TRUE, TRUE, NULL, NULL, 'Testing Battle Description', 3, 3, 3);
+-- VALUES('000002', 'newuser@gmail.com', 'Door Vs Wheel', 'BEFORE_OPEN', TRUE, TRUE, NULL, NULL, 'Testing Battle Description', 3, 3, 3);
 
 -- INSERT INTO Team(teamId, battleId, name, image)
--- VALUES(DEFAULT, '000001', 'Door', 'www.image.com');
+-- VALUES(DEFAULT, '000002', 'Door', 'www.image.com');
 
 -- INSERT INTO Team(teamId, battleId, name, image)
--- VALUES(DEFAULT, '000001', 'Wheel', 'www.image.com');
+-- VALUES(DEFAULT, '000002', 'Wheel', 'www.image.com');
 
 -- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
--- VALUES('000001', 1, NULL, NULL, NULL);
+-- VALUES('000002', 1, NULL, NULL, NULL);
 
 -- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
--- VALUES('000001', 2, NULL, NULL, NULL);
+-- VALUES('000002', 2, NULL, NULL, NULL);
 
 -- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
--- VALUES('000001', 3, NULL, NULL, NULL);
+-- VALUES('000002', 3, NULL, NULL, NULL);
 
