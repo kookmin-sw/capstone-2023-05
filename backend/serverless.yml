@@ -94,26 +94,36 @@ functions:
     events:
       - websocket:
           route: $connect
+
   disconnect-handler:
     handler: src/lambda/handler.disconnect_handler
     events:
       - websocket:
           route: $disconnect
+
   init-join-handler:
     handler: src/lambda/handler.init_join_handler
     events:
       - websocket:
           route: initJoin
+
   send-handler:
     handler: src/lambda/handler.send_handler
     events:
       - websocket:
           route: sendOpinion
+
   vote-handler:
     handler: src/lambda/handler.vote_handler
     events:
       - websocket:
           route: vote
+
+  get-new-ads-handler:
+    handler: src/lambda/handler.get_new_ads
+    events:
+      - websocket:
+          route: getNewAds
 
 custom:
   customDomain:

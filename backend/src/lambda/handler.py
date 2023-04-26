@@ -250,3 +250,12 @@ def vote_handler(event, context, wsclient):
         'body': 'Vote Success'
     }
     return response
+
+
+@wsclient
+def get_new_ads(event, context):
+    response = {
+        'stautsCode': 200,
+        'body': 'Getting New Ads Success'
+    }
+    return response
