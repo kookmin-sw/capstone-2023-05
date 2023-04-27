@@ -1,6 +1,7 @@
 import json
 import platform
 import random
+import csv
 import time
 from datetime import datetime
 import boto3
@@ -282,7 +283,8 @@ def get_new_ads(event, context, wsclient):
 
     # 의견들 중 같은 팀의 의견만을 뽑아내기
     for row in rows:
-        row = [s.strip('"')for s in row[0].strip('()').split(',')]
+        f = csv.reader([row[0]], delimiter=',', quotechar='\"')
+        row = next(f); row[0] = row[0][1:]; row[2] = row[2][:-1]
         team_id = dynamo_db.scan(
             TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
             FilterExpression="userID = :user_id",
