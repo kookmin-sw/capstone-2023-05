@@ -15,6 +15,7 @@ module.exports = {
           'battleBar' : "url('./images/battleBar.png')",
           'like' : "url('./images/like.svg')",
           'star' : "url('./images/star.svg')",
+          'bestLikes' : "url('./images/bestLikes.svg')",
         },
         backgroundSize:{
           'navBar' : '100%',
@@ -29,7 +30,7 @@ module.exports = {
           'card' : '17.2%',
           'opinion' : '74%',
           'likes' : '26%',
-          'window-card' : '13.8vh',
+          'window-card' : '14.5vh',
           'time-bar' : '1%',
         },
         width:{
@@ -46,11 +47,13 @@ module.exports = {
           'card': '15px'
         },
         padding:{
-          'aboveBest':'8%',
+          'aboveBest':'5%',
           'navBar' : '21%',
+          'aboveAds' : '7%',
         },
         margin:{
           'navBar' : '21%',
+          'opinion' : '11%',
         },
       },
     },
