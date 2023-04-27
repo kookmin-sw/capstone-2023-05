@@ -30,6 +30,7 @@ services:
   dynamodb:
     image: amazon/dynamodb-local:latest
     container_name: dynamodb
+    user: root
     restart: always
     ports:
       - 8000:8000
