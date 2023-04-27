@@ -2,6 +2,7 @@ import json
 import platform
 import time
 from datetime import datetime
+from psycopg2.errors import ForeignKeyViolation as fk_violation
 import boto3
 
 from src.game import app
@@ -157,9 +158,25 @@ def send_handler(event, context, wsclient):
             'statusCode': 404,
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
-    
-    # 같은 팀에게 자신의 의견을 broadcasting 한다.
+
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    round, num_of_likes = json.loads(event['body'])['round'], 0
     opinion = json.loads(event['body'])['opinion']
+    status = "CANDIDATE"
+    try:
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
+                psql_cursor.execute(insert_query)
+                psql_ctx.commit()
+    except fk_violation:
+        return {
+            'statusCode': 400,
+            'body': 'You tried insert malformed data into DB'
+        }
+
+    # 같은 팀에게 자신의 의견을 broadcasting 한다.
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     for connection in connections:
         other_connection = connection['connectionID']['S']
@@ -172,17 +189,6 @@ def send_handler(event, context, wsclient):
                     "opinion": opinion
                 }
             )
-
-    # PK: userId, battleId, roundNo, time
-    # extra fields: noOfLikes, content, status
-    round, num_of_likes = json.loads(event['body'])['round'], 0
-    status = "CANDIDATE"
-
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
