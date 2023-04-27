@@ -155,7 +155,7 @@ def send_handler(event, context, wsclient):
             break
     if my_info is None:
         return {
-            'statusCode': 404,
+            'statusCode': 400,
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
 
@@ -164,10 +164,11 @@ def send_handler(event, context, wsclient):
     round, num_of_likes = json.loads(event['body'])['round'], 0
     opinion = json.loads(event['body'])['opinion']
     status = "CANDIDATE"
+    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     try:
         with PostgresContext(**config.db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
+                insert_query = f'INSERT INTO Opinion (userid, battleid, roundno, nooflikes, content, \"time\", status) VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
                 psql_cursor.execute(insert_query)
                 psql_ctx.commit()
     except fk_violation:
@@ -177,7 +178,6 @@ def send_handler(event, context, wsclient):
         }
 
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
-    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
