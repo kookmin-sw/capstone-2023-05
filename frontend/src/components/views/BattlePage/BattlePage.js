@@ -19,6 +19,7 @@ const ChatComponent = (props) => {
   const nickname = 'nick'
   let round = 1;
 
+
   const socket = new WebSocket(dev);
   useEffect(() => {
 
@@ -118,6 +119,7 @@ const ChatComponent = (props) => {
 
           {/* timer */}
           <div className=' flex font-bold pt-aboveBest mr-9 text-gray-500'>0:59</div>
+
         </div>
 
         {/* 우측 채팅 바 */}

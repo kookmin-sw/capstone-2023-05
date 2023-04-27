@@ -29,6 +29,7 @@ function InGameNavBar(props) {
             {/* </div> */}
         </nav>
     </div>
+
   )
 }
 
