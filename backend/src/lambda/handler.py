@@ -270,10 +270,13 @@ def get_new_ads(event, context, wsclient):
     # 요청에 보낸 12개 중 상위 3개 선정
     old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
     new_ads = []
+
+    # 처음 요청하는 것이 아니면 기존의 Ads(12개)에 올라온 의견들이 있을 것.
+    # 이 중 top3를 살린다.
     if len(old_ads) == 12:
         new_ads.extend(old_ads[:3])
 
-    # 의견들을 얻기
+    # 새로운 CANDIDATE 의견들을 얻기
     candidates = []
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
@@ -283,8 +286,13 @@ def get_new_ads(event, context, wsclient):
 
     # 의견들 중 같은 팀의 의견만을 뽑아내기
     for row in rows:
+        # row[0]가 '(user123@example.com,0,"Opinion 1")'과 같은 형식으로 되어있기 때문에
+        # 이를 말끔히 뽑아내는 과정이 필요
+        # csv를 이용해 의견 안에 쉼표가 있는 경우에도 말끔히 뽑아내는 것이 가능
         f = csv.reader([row[0]], delimiter=',', quotechar='\"')
-        row = next(f); row[0] = row[0][1:]; row[2] = row[2][:-1]
+        row = next(f)    # row = ['(user123@example.com', 0, 'Opinion 1)']
+        row[0] = row[0][1:]; row[2] = row[2][:-1]
+
         team_id = dynamo_db.scan(
             TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
             FilterExpression="userID = :user_id",
@@ -300,6 +308,7 @@ def get_new_ads(event, context, wsclient):
             })
 
     # candidates 중 9개 랜덤 선정
+    # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
     new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
 
     # refresh 이후 likes 수는 모두 0으로 초기화
