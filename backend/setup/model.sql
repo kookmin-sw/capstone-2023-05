@@ -37,11 +37,12 @@ CREATE TABLE Opinion (
   userId varchar(50) NOT NULL,
   battleId varchar(6) NOT NULL,
   roundNo serial NOT NULL,
-  "time" timestamp NOT NULL,
+  "order" serial NOT NULL,
   noOfLikes integer NOT NULL,
   content varchar(150) NOT NULL,
+  "time" timestamp NOT NULL,
   status opinion_status NOT NULL,
-  CONSTRAINT PK_OPINION_ID PRIMARY KEY (userId, battleId, roundNo, "time"),
+  CONSTRAINT PK_OPINION_ID PRIMARY KEY (userId, battleId, roundNo, "order"),
   CONSTRAINT FK_2 FOREIGN KEY (battleId, roundNo) REFERENCES Round (battleId, roundNo),
   CONSTRAINT FK_3 FOREIGN KEY (userId) REFERENCES "User" (userId)
 );
@@ -67,24 +68,26 @@ CREATE TABLE Support (
 
 -- Local Testing Dummy Data
 
--- INSERT INTO "User" (userId, passwd, nickname, profile) 
--- VALUES ('newuser@gmail.com', 'password', 'abc', 'www.naver.com');
+INSERT INTO "User" (userId, passwd, nickname, profile) 
+VALUES ('newuser@gmail.com', 'password', 'abc', 'www.naver.com');
 
--- INSERT INTO DiscussionBattle(battleId, ownerId, title, status, visibility, switchChance, startTime, endTime, description, maxNoOfRounds, maxNoOfVotes, maxNoOfOpinion)
--- VALUES('000002', 'newuser@gmail.com', 'Door Vs Wheel', 'BEFORE_OPEN', TRUE, TRUE, NULL, NULL, 'Testing Battle Description', 3, 3, 3);
+INSERT INTO DiscussionBattle(battleId, ownerId, title, status, visibility, switchChance, startTime, endTime, description, maxNoOfRounds, maxNoOfVotes, maxNoOfOpinion)
+VALUES('000002', 'newuser@gmail.com', 'Door Vs Wheel', 'BEFORE_OPEN', TRUE, TRUE, NULL, NULL, 'Testing Battle Description', 3, 3, 3);
 
--- INSERT INTO Team(teamId, battleId, name, image)
--- VALUES(DEFAULT, '000002', 'Door', 'www.image.com');
+INSERT INTO Team(teamId, battleId, name, image)
+VALUES(DEFAULT, '000002', 'Door', 'www.image.com');
 
--- INSERT INTO Team(teamId, battleId, name, image)
--- VALUES(DEFAULT, '000002', 'Wheel', 'www.image.com');
+INSERT INTO Team(teamId, battleId, name, image)
+VALUES(DEFAULT, '000002', 'Wheel', 'www.image.com');
 
--- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
--- VALUES('000002', 1, NULL, NULL, NULL);
+Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
+VALUES('000002', 1, NULL, NULL, NULL);
 
--- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
--- VALUES('000002', 2, NULL, NULL, NULL);
+Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
+VALUES('000002', 2, NULL, NULL, NULL);
 
--- Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
--- VALUES('000002', 3, NULL, NULL, NULL);
+Insert INTO Round(battleId, roundNo, startTime, endTime, description) 
+VALUES('000002', 3, NULL, NULL, NULL);
 
+INSERT INTO Opinion (userId, battleId, roundNo, noOfLikes, content, "time", status)
+VALUES ('newuser@gmail.com', '000002', 1, 0, '첫번째 의견입니다.', '2023-04-27 10:00:00', 'CANDIDATE');
