@@ -8,16 +8,16 @@ const ChatComponent = (props) => {
   const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
   const functionRef = useRef(null);
 
-  let battleId;
-  let userId;
-  let nickname;
-  let round;
+  // let battleId;
+  // let userId;
+  // let nickname;
+  // let round;
 
   let recvData;
-  // const battleId = '1234';
-  // const userId = 'example@gmail.com'
-  // const nickname = 'nick'
-  // let round = 1;
+  const battleId = '1234';
+  const userId = 'example@gmail.com'
+  const nickname = 'nick'
+  let round = 1;
 
   const socket = new WebSocket(dev);
   useEffect(() => {
@@ -79,19 +79,45 @@ const ChatComponent = (props) => {
     <div className='flex flex-col h-screen'>
       {/* 채팅 UI 구현 */}
       <InGameNavBar data={`${'치킨'}, ${'피자'}`}/>
-      <div className='flex flex-row flex-1 my-auto'>
+        <div className=' w-screen h-time-bar bg-white'>
+          <img src='../../../images/battleBar.png' alt='timer'/>
+        </div>
+      <div className='flex flex-1 my-auto'>
         {/* 좌측 광고 */}
-        <div className='flex flex-col items-center w-2/3 bg-background-color h-full pt-aboveBest'>
-          <div className='flex'> {/* best */}
-            <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
-            <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
-            <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+        <div className='flex w-2/3 h-full bg-background-color'>
+          {/* opinions */}
+          <div className='flex flex-col w-full h-full items-center pt-aboveBest'>
+              {/* best */}
+            <div className='flex w-full'>
+              <div className=' mb-2'>
+                <button className=' bg-star bg-cover w-3 h-3 mr-3'/>
+                <span className=' font-bold mr-3'>Best 3</span>
+                <button className=' text-gray-500 text-xs underline'>Last</button>
+              </div>
+            </div>
+
+            <div className='flex'> {/* best opinions */}
+              <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+              <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+              <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+            </div>
+      
+            {/* ads */}
+            <div className='flex w-full'>
+              <div className=' mb-2'>
+                <button className=' bg-star bg-cover w-3 h-3 mr-3'/>
+                <span className=' font-bold mr-3'>Ads</span>
+              </div>
+            </div>
+            <div className='flex'> {/* ads opinions */}
+              <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+              <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+              <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
+            </div>
           </div>
-          <div className='flex'> {/* ads */}
-            <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
-            <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
-            <CardComponent data={`${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}`}/>
-          </div>
+
+          {/* timer */}
+          <div className=' flex font-bold pt-aboveBest mr-9 text-gray-500'>0:59</div>
         </div>
 
         {/* 우측 채팅 바 */}
