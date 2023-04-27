@@ -1,5 +1,6 @@
 import json
 import platform
+import random
 import time
 from datetime import datetime
 import boto3
@@ -254,10 +255,9 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
+    # 라운드 시작 시간을 얻어서 Refresh 주기를 계산
     curr_time = datetime.fromtimestamp(time.time())
     my_battle_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['round']
-
-    # 라운드 시작 시간을 얻어서 Refresh 주기를 계산
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
             select_query = f'SELECT starttime from Round WHERE battleid = \'{my_battle_id}\' and roundno = {curr_round}'
@@ -265,6 +265,54 @@ def get_new_ads(event, context, wsclient):
             row = psql_cursor.fetchall()
             round_start_time = row[0][0]
     refresh_term = curr_time - round_start_time
+
+    # 요청에 보낸 12개 중 상위 3개 선정
+    old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
+    new_ads = []
+    if len(old_ads) == 12:
+        new_ads.extend(old_ads[:3])
+
+    # 의견들을 얻기
+    candidates = []
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            select_query = f'SELECT (userid, nooflikes, content) FROM opinion WHERE battleid = \'{my_battle_id}\' and roundno = {curr_round} and status = \'CANDIDATE\' and time > \'{round_start_time}\''
+            psql_cursor.execute(select_query)
+            rows = psql_cursor.fetchall()
+
+    # 의견들 중 같은 팀의 의견만을 뽑아내기
+    for row in rows:
+        row = [s.strip('"')for s in row[0].strip('()').split(',')]
+        team_id = dynamo_db.scan(
+            TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+            FilterExpression="userID = :user_id",
+            ExpressionAttributeValues={":user_id": {"S": row[0]}},
+            ProjectionExpression="teamID"
+        )['Items'][0]['teamID']['S']
+
+        if team_id == json.loads(event['body'])['teamId']:
+            candidates.append({
+                "userId": row[0],
+                "likes": row[1],
+                "content": row[2]
+            })
+
+    # candidates 중 9개 랜덤 선정
+    new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
+
+    # refresh 이후 likes 수는 모두 0으로 초기화
+    for ad in new_ads:
+        ad['likes'] = 0
+
+    # New Ads 전송
+    wsclient.send(
+        connection_id=event['requestContext']['connectionId'],
+        data={
+            "action": "recvNewAds",
+            "result": "success",
+            "newAds": new_ads
+        }
+    )
 
     response = {
         'stautsCode': 200,
