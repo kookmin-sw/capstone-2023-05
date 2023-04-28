@@ -16,8 +16,12 @@ module.exports = {
           'like' : "url('./images/like.svg')",
           'star' : "url('./images/star.svg')",
         },
+        backgroundSize:{
+          'navBar' : '100%',
+        },
         fontSize:{
-          'font' :'1vh',
+          'nickname' :'1.5vh',
+          'body' : '1vh',
         },
         height:{
           '7/8' : '87.5%',
@@ -26,6 +30,7 @@ module.exports = {
           'opinion' : '74%',
           'likes' : '26%',
           'window-card' : '13.8vh',
+          'time-bar' : '1%',
         },
         width:{
           '7/8' : '87.5%',
@@ -41,8 +46,12 @@ module.exports = {
           'card': '15px'
         },
         padding:{
-          'aboveBest':'8%'
-        }
+          'aboveBest':'8%',
+          'navBar' : '21%',
+        },
+        margin:{
+          'navBar' : '21%',
+        },
       },
     },
   }
