@@ -6,12 +6,12 @@ function CardComponent(props) {
     const opinion = opinions[1];
     let likes = opinions[2];
   return (
-    <div className='flex flex-col w-window-card h-window-card rounded-card bg-white'>
+    <div className='flex flex-col w-window-card h-window-card rounded-card bg-white mr-2'>
         <div className=' h-opinion px-5'>
-            <div className=' py-2 font-semibold text-font'>
+            <div className=' py-2 font-semibold text-nickname'>
                 {nickname}
             </div>
-            <div className=' text-font'>
+            <div className=' text-body'>
                 {opinion}
             </div>
         </div>
