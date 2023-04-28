@@ -172,6 +172,14 @@ def send_handler(event, context, wsclient):
                 psql_cursor.execute(insert_query)
                 psql_ctx.commit()
     except fk_violation:
+        wsclient.send(
+                connection_id=my_connection_id,
+                data={
+                    "action": "recvOpinion",
+                    "nickname": "MASTER",
+                    "opinion": "You send malformed data."
+                }
+            )
         return {
             'statusCode': 400,
             'body': 'You tried insert malformed data into DB'
