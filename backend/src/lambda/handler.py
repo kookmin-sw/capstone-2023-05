@@ -256,16 +256,9 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
-    # 라운드 시작 시간을 얻어서 Refresh 주기를 계산
-    curr_time = datetime.fromtimestamp(time.time())
-    my_battle_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['round']
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            select_query = f'SELECT starttime from Round WHERE battleid = \'{my_battle_id}\' and roundno = {curr_round}'
-            psql_cursor.execute(select_query)
-            row = psql_cursor.fetchall()
-            round_start_time = row[0][0]
-    refresh_term = curr_time - round_start_time
+    # 걍 Refresh 30초, 갱신 횟수는 후에 테이블에 추가될 column값 사용
+    # 승호 형에게 줄 의견들은 PUBLISHED 의견들만 골라서 함수 파라미터로 주자.
+    # 승호 형이 원하는 모양: ['(user123@example.com,0,"Opinion 1")', '(user123@example.com,0,"Opinion 1")']
 
     # 요청에 보낸 12개 중 상위 3개 선정
     old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
@@ -278,6 +271,7 @@ def get_new_ads(event, context, wsclient):
 
     # 새로운 CANDIDATE 의견들을 얻기
     candidates = []
+    my_battle_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['round']
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
             select_query = f'SELECT (userid, nooflikes, content) FROM opinion WHERE battleid = \'{my_battle_id}\' and roundno = {curr_round} and status = \'CANDIDATE\' and time > \'{round_start_time}\''
@@ -312,6 +306,7 @@ def get_new_ads(event, context, wsclient):
     new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
 
     # refresh 이후 likes 수는 모두 0으로 초기화
+    # DB 초기화 없이 DB 절댓값, 최신의 정보를 준다.
     for ad in new_ads:
         ad['likes'] = 0
 
