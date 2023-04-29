@@ -160,6 +160,17 @@ def send_handler(event, context, wsclient):
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
     
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    round, num_of_likes = json.loads(event['body'])['round'], 0
+    status = "CANDIDATE"
+
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"time\", status) VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
+            psql_cursor.execute(insert_query)
+            psql_ctx.commit()
+    
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
     opinion = json.loads(event['body'])['opinion']
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
@@ -174,17 +185,6 @@ def send_handler(event, context, wsclient):
                     "opinion": opinion
                 }
             )
-
-    # PK: userId, battleId, roundNo, time
-    # extra fields: noOfLikes, content, status
-    round, num_of_likes = json.loads(event['body'])['round'], 0
-    status = "CANDIDATE"
-
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
@@ -278,57 +278,68 @@ def get_new_ads(event, context, wsclient):
             row = eval(psql_cursor.fetchall()[0][0])
 
             refresh_time, refresh_cnt = row[0], row[1]
+    
+    for cnt in range(refresh_cnt):
+        # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
+        my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                select_query = f'SELECT FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"teamId\" = \'{my_team_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
+                psql_cursor.execute(select_query)
+                rows = psql_cursor.fetchall()
+                print(rows)
 
-    # 요청에 보낸 12개 중 상위 3개 선정
-    # old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
-    # new_ads = []
+        # 3. 'PUBLISHED', 'DROPPED' 의견은 승호 형의 best3 반환하는 함수로 넘겨준다.
+        #    'CANDIDATE' 의견은 내가 사용한다
+        parsed_rows = []
+        best_candidates = []
 
-    # 처음 요청하는 것이 아니면 기존의 Ads(12개)에 올라온 의견들이 있을 것.
-    # 이 중 top3를 살린다.
-    # if len(old_ads) == 12:
-    #     new_ads.extend(old_ads[:3])
+        # 요청에 보낸 12개 중 상위 3개 선정
+        # old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
+        # new_ads = []
 
-    # my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
-    # with PostgresContext(**config.db_config) as psql_ctx:
-    #     with psql_ctx.cursor() as psql_cursor:
-    #         select_query = f'SELECT FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"teamId\" = \'{my_team_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
-    #         psql_cursor.execute(select_query)
-    #         rows = psql_cursor.fetchall()
+        # 처음 요청하는 것이 아니면 기존의 Ads(12개)에 올라온 의견들이 있을 것.
+        # 이 중 top3를 살린다.
+        # if len(old_ads) == 12:
+        #     new_ads.extend(old_ads[:3])
 
-    # rows는 나중에 승호 형이 만들 함수에 넘겨준다.
-    # 승호 형에게 줄 의견들은 REPORTED나 CANDIDATE가 아닌 의견들만 골라서 함수 파라미터로 주자.
-    # 승호 형이 원하는 모양: ['(user123@example.com,0,"Opinion 1")', '(user123@example.com,0,"Opinion 1")']
+        # rows는 나중에 승호 형이 만들 함수에 넘겨준다.
+        # 승호 형에게 줄 의견들은 REPORTED나 CANDIDATE가 아닌 의견들만 골라서 함수 파라미터로 주자.
+        # 승호 형이 원하는 모양: ['(user123@example.com,0,"Opinion 1")', '(user123@example.com,0,"Opinion 1")']
 
-    # 새로운 CANDIDATE 의견들을 얻기
-    # candidates = []
+        # 새로운 CANDIDATE 의견들을 얻기
+        # candidates = []
 
-    # 의견들 중 같은 팀의 의견만을 뽑아내기
-    # for row in rows:
-        # row[0]가 '(user123@example.com,0,"Opinion 1")'과 같은 형식으로 되어있기 때문에
-        # 이를 말끔히 뽑아내는 과정이 필요
-        # csv를 이용해 의견 안에 쉼표가 있는 경우에도 말끔히 뽑아내는 것이 가능
-        # f = csv.reader([row[0]], delimiter=',', quotechar='\"')
-        # row = next(f)    # row = ['(user123@example.com', 0, 'Opinion 1)']
-        # row[0] = row[0][1:]; row[2] = row[2][:-1]
-        # candidates.append({
-        #     "userId": row[0],
-        #     "likes": row[1],
-        #     "content": row[2]
-        # })
+        # 의견들 중 같은 팀의 의견만을 뽑아내기
+        # for row in rows:
+            # row[0]가 '(user123@example.com,0,"Opinion 1")'과 같은 형식으로 되어있기 때문에
+            # 이를 말끔히 뽑아내는 과정이 필요
+            # csv를 이용해 의견 안에 쉼표가 있는 경우에도 말끔히 뽑아내는 것이 가능
+            # f = csv.reader([row[0]], delimiter=',', quotechar='\"')
+            # row = next(f)    # row = ['(user123@example.com', 0, 'Opinion 1)']
+            # row[0] = row[0][1:]; row[2] = row[2][:-1]
+            # candidates.append({
+            #     "userId": row[0],
+            #     "likes": row[1],
+            #     "content": row[2]
+            # })
 
-    # candidates 중 9개 랜덤 선정
-    # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
-    # new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
+        # candidates 중 9개 랜덤 선정
+        # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
+        # new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
 
-    # New Ads 전송
-    # wsclient.send(
-    #     connection_id=event['requestContext']['connectionId'],
-    #     data={
-    #         "action": "recvNewAds",
-    #         "result": "success",
-    #         "newAds": new_ads
-    #     }
-    # )
+        # New Ads 전송
+        # wsclient.send(
+        #     connection_id=event['requestContext']['connectionId'],
+        #     data={
+        #         "action": "recvNewAds",
+        #         "result": "success",
+        #         "newAds": new_ads
+        #     }
+        # )
+
+        if cnt < refresh_cnt - 1:
+            time.sleep(refresh_time)
 
     response = {
         'stautsCode': 200,
