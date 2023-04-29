@@ -220,6 +220,14 @@ def vote_handler(event, context, wsclient):
     battle_id, user_id, nickname = response[0]['battleID']['S'], response[0]['userID']['S'], response[0]['nickname']['S']
     team_id = json.loads(event['body'])['teamId']
 
+    # Support 테이블에 팀 선택 기록 저장
+    round = json.loads(event['body'])['round']
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+            psql_cursor.execute(insert_query)
+            psql_ctx.commit()
+
     # DynamoDB에 팀 선택 결과 반영
     dynamo_db.put_item(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
@@ -250,14 +258,6 @@ def vote_handler(event, context, wsclient):
             "teamName": team_name
         }
     )
-    
-    # Support 테이블에 팀 선택 기록 저장
-    round = json.loads(event['body'])['round']
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
