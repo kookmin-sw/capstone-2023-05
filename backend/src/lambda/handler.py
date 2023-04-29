@@ -115,7 +115,7 @@ def init_join_handler(event, context, wsclient):
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT teamid, name FROM team WHERE battleid = \'{battle_id}\'"
+            select_query = f"SELECT \"teamId\", name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
             psql_cursor.execute(select_query)
             rows = psql_cursor.fetchall()
             team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
@@ -223,7 +223,7 @@ def vote_handler(event, context, wsclient):
     # 팀 이름을 찾기 위한 SQL문 실행
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\' and teamid = \'{team_id}\'"
+            select_query = f"SELECT name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\' and \"teamId\" = \'{team_id}\'"
             psql_cursor.execute(select_query)
             row = psql_cursor.fetchall()
             team_name = row[0][0]
@@ -243,7 +243,7 @@ def vote_handler(event, context, wsclient):
     round = json.loads(event['body'])['round']
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Support VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+            insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
             psql_cursor.execute(insert_query)
             psql_ctx.commit()
 
@@ -256,56 +256,79 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
+    # 함수 내부에서 전체적인 순서
+    # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
+    # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
+    #    조건 1: 요청한 유저와 같은 battle ID
+    #    조건 2: 요청한 유저와 같은 team ID
+    #    조건 3: 요청한 유저와 같은 round Number
+    #    조건 4. REPORTED가 아닌 status
+    # 3. 'PUBLISHED', 'DROPPED' 의견은 승호 형의 best3 반환하는 함수로 넘겨준다.
+    #    'CANDIDATE' 의견은 내가 사용한다
+    # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
+    # 5. 랜덤하게 선택한 의견들을 websocket 메시지로 전송해준다.
+    # 2 ~ 5번의 과정을 갱신 횟수 만큼 반복적으로 시행한다(반복문 사용)
+
+    # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
+    my_battle_id = json.loads(event['body'])['battleId']
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
+            psql_cursor.execute(select_query)
+            row = eval(psql_cursor.fetchall()[0][0])
+
+            refresh_time, refresh_cnt = row[0], row[1]
+
     # 요청에 보낸 12개 중 상위 3개 선정
-    old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
-    new_ads = []
+    # old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
+    # new_ads = []
 
     # 처음 요청하는 것이 아니면 기존의 Ads(12개)에 올라온 의견들이 있을 것.
     # 이 중 top3를 살린다.
-    if len(old_ads) == 12:
-        new_ads.extend(old_ads[:3])
+    # if len(old_ads) == 12:
+    #     new_ads.extend(old_ads[:3])
 
-    my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            select_query = f'SELECT FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"teamId\" = \'{my_team_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
-            psql_cursor.execute(select_query)
-            rows = psql_cursor.fetchall()
+    # my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
+    # with PostgresContext(**config.db_config) as psql_ctx:
+    #     with psql_ctx.cursor() as psql_cursor:
+    #         select_query = f'SELECT FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"teamId\" = \'{my_team_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
+    #         psql_cursor.execute(select_query)
+    #         rows = psql_cursor.fetchall()
 
     # rows는 나중에 승호 형이 만들 함수에 넘겨준다.
     # 승호 형에게 줄 의견들은 REPORTED나 CANDIDATE가 아닌 의견들만 골라서 함수 파라미터로 주자.
     # 승호 형이 원하는 모양: ['(user123@example.com,0,"Opinion 1")', '(user123@example.com,0,"Opinion 1")']
 
     # 새로운 CANDIDATE 의견들을 얻기
-    candidates = []
+    # candidates = []
 
     # 의견들 중 같은 팀의 의견만을 뽑아내기
-    for row in rows:
+    # for row in rows:
         # row[0]가 '(user123@example.com,0,"Opinion 1")'과 같은 형식으로 되어있기 때문에
         # 이를 말끔히 뽑아내는 과정이 필요
         # csv를 이용해 의견 안에 쉼표가 있는 경우에도 말끔히 뽑아내는 것이 가능
-        f = csv.reader([row[0]], delimiter=',', quotechar='\"')
-        row = next(f)    # row = ['(user123@example.com', 0, 'Opinion 1)']
-        row[0] = row[0][1:]; row[2] = row[2][:-1]
-        candidates.append({
-            "userId": row[0],
-            "likes": row[1],
-            "content": row[2]
-        })
+        # f = csv.reader([row[0]], delimiter=',', quotechar='\"')
+        # row = next(f)    # row = ['(user123@example.com', 0, 'Opinion 1)']
+        # row[0] = row[0][1:]; row[2] = row[2][:-1]
+        # candidates.append({
+        #     "userId": row[0],
+        #     "likes": row[1],
+        #     "content": row[2]
+        # })
 
     # candidates 중 9개 랜덤 선정
     # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
-    new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
+    # new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
 
     # New Ads 전송
-    wsclient.send(
-        connection_id=event['requestContext']['connectionId'],
-        data={
-            "action": "recvNewAds",
-            "result": "success",
-            "newAds": new_ads
-        }
-    )
+    # wsclient.send(
+    #     connection_id=event['requestContext']['connectionId'],
+    #     data={
+    #         "action": "recvNewAds",
+    #         "result": "success",
+    #         "newAds": new_ads
+    #     }
+    # )
 
     response = {
         'stautsCode': 200,
