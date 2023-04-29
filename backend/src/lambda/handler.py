@@ -280,7 +280,7 @@ def get_new_ads(event, context, wsclient):
             refresh_time, refresh_cnt = row[0], row[1]
     
     # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
-    old_ads = json.loads(event['body'])['currAds']
+    old_ads = []
     for cnt in range(refresh_cnt):
         # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
@@ -308,39 +308,23 @@ def get_new_ads(event, context, wsclient):
             old_ads = sorted(old_ads, key=lambda x: x["likes"], reverse=True)
             new_ads.extend(old_ads[:3])
 
-        # 새로운 CANDIDATE 의견들을 얻기
-        # candidates = []
-
-        # 의견들 중 같은 팀의 의견만을 뽑아내기
-        # for row in rows:
-            # row[0]가 '(user123@example.com,0,"Opinion 1")'과 같은 형식으로 되어있기 때문에
-            # 이를 말끔히 뽑아내는 과정이 필요
-            # csv를 이용해 의견 안에 쉼표가 있는 경우에도 말끔히 뽑아내는 것이 가능
-            # f = csv.reader([row[0]], delimiter=',', quotechar='\"')
-            # row = next(f)    # row = ['(user123@example.com', 0, 'Opinion 1)']
-            # row[0] = row[0][1:]; row[2] = row[2][:-1]
-            # candidates.append({
-            #     "userId": row[0],
-            #     "likes": row[1],
-            #     "content": row[2]
-            # })
-
         # candidates 중 9개 랜덤 선정
         # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
-        # new_ads.extend(random.sample(candidates, 9 if len(new_ads) > 0 else 12))
+        new_ads.extend(random.sample(candidates, 9 if len(new_ads) else 12))
 
-        # New Ads 전송
-        # wsclient.send(
-        #     connection_id=event['requestContext']['connectionId'],
-        #     data={
-        #         "action": "recvNewAds",
-        #         "result": "success",
-        #         "newAds": new_ads
-        #     }
-        # )
+        # 5. New Ads 전송
+        wsclient.send(
+            connection_id=event['requestContext']['connectionId'],
+            data={
+                "action": "recvNewAds",
+                "result": "success",
+                "newAds": new_ads
+            }
+        )
 
-        if cnt < refresh_cnt - 1:
+        if cnt < 2:
             old_ads = new_ads
+            print("Loop %d finished" % cnt)
             time.sleep(refresh_time)
 
     response = {
