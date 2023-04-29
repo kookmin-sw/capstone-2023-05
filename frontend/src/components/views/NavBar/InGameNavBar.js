@@ -1,13 +1,26 @@
-import { React, useEffect, useState } from "react";
+import { React, useEffect } from "react";
 
 function InGameNavBar(props) {    
     const teams = props.data[0].split(', ');
     const teamA = teams[0];
     const teamB = teams[1];
+    const teamId = Number(teams[2]);
     const round = props.data[1];
 
     useEffect(()=>{
         startTimer();
+        if(teamId === 1){ 
+            document.getElementById('b').classList.remove('text-2xl');
+            document.getElementById('b').classList.add('text-xl');
+            document.getElementById('b').classList.add('text-white');
+            document.getElementById('b').classList.add('text-opacity-40');
+        }
+        else if(teamId === 2){
+            document.getElementById('a').classList.remove('text-2xl');
+            document.getElementById('a').classList.add('text-xl');
+            document.getElementById('a').classList.add('text-white');
+            document.getElementById('a').classList.add('text-opacity-40');
+        }
     },[]);
     
     let roundTimer;
@@ -28,6 +41,7 @@ function InGameNavBar(props) {
         document.getElementById('roundTimer').innerText = ((roundSec%60) < 10) ? parseInt(roundSec/60) + " : 0" + (roundSec%60) : parseInt(roundSec/60) + " : " + (roundSec%60);
     }
     
+    
 
 
   return (
@@ -45,14 +59,14 @@ function InGameNavBar(props) {
                 <br/>
         </nav>
         <div className=" relative text-white text-4xl">
-            <span id="a" className="absolute left-1/4 text-center pb-2 ml-10">
-                <span className="text-2xl mr-3">
+            <span id="a" className="absolute left-1/4 align-text-bottom pb-2 ml-10 text-2xl">
+                <span className=" mr-3">
                     A team 
                 </span>
                 {teamA}
             </span>
-            <span id="b" className="absolute right-1/4 text-center pb-2 mr-10">
-                <span className="text-2xl mr-3">
+            <span id="b" className="absolute right-1/4 align-text-bottom pb-2 mr-10 text-2xl">
+                <span className=" mr-3">
                     B team 
                 </span>
                 {teamB}

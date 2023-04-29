@@ -16,6 +16,7 @@ const ChatComponent = (props) => {
   const battleId = '000001';
   const userId = 'user123@example.com'
   const nickname = 'hoon'
+  const teamId = "1"; // 팀 아이디 {teamA : 1, teamB : 2, host : ?}
   let round = 1;
 
   
@@ -109,7 +110,7 @@ const ChatComponent = (props) => {
   };
   
   const handleKeyPress = (event) => {
-    if(event.code == 'Enter' && message != ''){
+    if(event.code === 'Enter' && message !== ''){
       messageSend();
     }
   }
@@ -120,7 +121,7 @@ const ChatComponent = (props) => {
     <div className='flex flex-col h-screen'>
       {/* 채팅 UI 구현 */}
       {/* 상단 배너 */}
-      <InGameNavBar data={[`${'치킨'}, ${'피자'}`,round]}/>
+      <InGameNavBar data={[`${'치킨'}, ${'피자'}, ${teamId}`,round]}/>
       {/* 타이머 게이지 */}
       <div className="relative h-2 bg-white">
         <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-white to-red-500" style={{ width: `${(value / maxValue) * 100}%` }} />
