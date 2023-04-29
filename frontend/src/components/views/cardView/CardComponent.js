@@ -17,7 +17,7 @@ function CardComponent(props) {
                 {opinion}
             </div>
         </div>
-        {isBest ? (
+        {isBest ? ( // best인지 ads인지 구별해서 카드 표현
         <div id='like' className='relative mt-auto rounded-b-card px-5 h-likes font-bold bg-bestLikes bg-cover text-white'>
             <div className='absolute inline transform translate-y-1/4 text-sm'>
                 + {likes}
