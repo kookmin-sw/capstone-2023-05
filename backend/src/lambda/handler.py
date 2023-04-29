@@ -163,6 +163,8 @@ def send_handler(event, context, wsclient):
     # PK: userId, battleId, roundNo, time
     # extra fields: noOfLikes, content, status
     round, num_of_likes = json.loads(event['body'])['round'], 0
+    opinion = json.loads(event['body'])['opinion']
+    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
 
     with PostgresContext(**config.db_config) as psql_ctx:
@@ -172,8 +174,6 @@ def send_handler(event, context, wsclient):
             psql_ctx.commit()
     
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
-    opinion = json.loads(event['body'])['opinion']
-    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
@@ -279,33 +279,34 @@ def get_new_ads(event, context, wsclient):
 
             refresh_time, refresh_cnt = row[0], row[1]
     
+    # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
+    old_ads = json.loads(event['body'])['currAds']
     for cnt in range(refresh_cnt):
         # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
         with PostgresContext(**config.db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                select_query = f'SELECT FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"teamId\" = \'{my_team_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
+                select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
                 psql_cursor.execute(select_query)
                 rows = psql_cursor.fetchall()
-                print(rows)
 
-        # 3. 'PUBLISHED', 'DROPPED' 의견은 승호 형의 best3 반환하는 함수로 넘겨준다.
+        # 3. 'PUBLISHED', 'DROPPED' 의견(best3_candidates)은 승호 형의 best3 반환하는 함수로 넘겨준다.
         #    'CANDIDATE' 의견은 내가 사용한다
-        parsed_rows = []
-        best_candidates = []
+        best3_candidates, candidates = [], []
+        for row in rows:
+            if row[-1] != "CANDIDATE":
+                best3_candidates.append(row[:5])
+            else:
+                candidates.append({"userId": row[0], "likes": row[4], "content": row[5]})
 
-        # 요청에 보낸 12개 중 상위 3개 선정
-        # old_ads = sorted(json.loads(event['body'])['currAds'], key=lambda x: x['likes'], reverse=True)
-        # new_ads = []
-
-        # 처음 요청하는 것이 아니면 기존의 Ads(12개)에 올라온 의견들이 있을 것.
-        # 이 중 top3를 살린다.
-        # if len(old_ads) == 12:
-        #     new_ads.extend(old_ads[:3])
-
-        # rows는 나중에 승호 형이 만들 함수에 넘겨준다.
-        # 승호 형에게 줄 의견들은 REPORTED나 CANDIDATE가 아닌 의견들만 골라서 함수 파라미터로 주자.
-        # 승호 형이 원하는 모양: ['(user123@example.com,0,"Opinion 1")', '(user123@example.com,0,"Opinion 1")']
+        # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
+        # 그 전에 요청 받은 12개 의견들 중 상위 3개 선정
+        new_ads = []
+        if len(old_ads):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
+            for ad in old_ads:
+                ad["likes"] /= refresh_time
+            old_ads = sorted(old_ads, key=lambda x: x["likes"], reverse=True)
+            new_ads.extend(old_ads[:3])
 
         # 새로운 CANDIDATE 의견들을 얻기
         # candidates = []
@@ -339,6 +340,7 @@ def get_new_ads(event, context, wsclient):
         # )
 
         if cnt < refresh_cnt - 1:
+            old_ads = new_ads
             time.sleep(refresh_time)
 
     response = {

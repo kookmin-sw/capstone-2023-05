@@ -124,6 +124,7 @@ functions:
     events:
       - websocket:
           route: getNewAds
+    timeout: 100
 
 custom:
   customDomain:
