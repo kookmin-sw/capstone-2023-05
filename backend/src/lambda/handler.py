@@ -256,6 +256,9 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
+    # TODO: PostgreSQL query 실행하는 코드가 여러 번 반복해서 나타난다.
+    # 이를 줄이기 위해 insert, delete, select, update 등의 함수로 만들 수 없을까?
+    
     # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
     my_battle_id = json.loads(event['body'])['battleId']
     with PostgresContext(**config.db_config) as psql_ctx:
@@ -273,6 +276,7 @@ def get_new_ads(event, context, wsclient):
             time.sleep(refresh_time)
 
         # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
+        # TODO: 같은 팀의 의견을 골라야 한다.
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
         with PostgresContext(**config.db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
@@ -297,6 +301,14 @@ def get_new_ads(event, context, wsclient):
                 ad["likes"] /= refresh_time
             old_ads = sorted(old_ads, key=lambda x: x["likes"], reverse=True)
             tmp.extend(old_ads[:3])
+        
+            # 기존의 PUBLISHED 의견 중 상위 3개에 들지 못한 의견들은 DROPPED로 status 변경
+            orders = [str(ad['order']) for ad in old_ads[3:]]
+            with PostgresContext(**config.db_config) as psql_ctx:
+                with psql_ctx.cursor() as psql_cursor:
+                    update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(orders)})'
+                    psql_cursor.execute(update_query)
+                    psql_ctx.commit()
 
         # candidates 중 9개 랜덤 선정
         # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
@@ -309,15 +321,12 @@ def get_new_ads(event, context, wsclient):
         tmp.extend(random.sample(candidates, sampling_number))
 
         # status를 CANDIDATE에서 PUBLISHED로 변경
+        orders = [str(ad['order']) for ad in tmp]
         with PostgresContext(**config.db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                for ad in tmp:
-                    ad_order = ad['order']
-                    print("Publishing %d Opinion" % ad_order)
-                    update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" = {ad_order}'
-                    psql_cursor.execute(update_query)
-                    psql_ctx.commit()
-                print("Finish publish #%d" % cnt)
+                update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(orders)})'
+                psql_cursor.execute(update_query)
+                psql_ctx.commit()
 
         # 5. New Ads 전송
         new_ads = []
