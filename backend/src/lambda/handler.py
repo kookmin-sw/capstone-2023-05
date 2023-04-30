@@ -256,19 +256,6 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
-    # 함수 내부에서 전체적인 순서
-    # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
-    # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
-    #    조건 1: 요청한 유저와 같은 battle ID
-    #    조건 2: 요청한 유저와 같은 team ID
-    #    조건 3: 요청한 유저와 같은 round Number
-    #    조건 4. REPORTED가 아닌 status
-    # 3. 'PUBLISHED', 'DROPPED' 의견은 승호 형의 best3 반환하는 함수로 넘겨준다.
-    #    'CANDIDATE' 의견은 내가 사용한다
-    # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
-    # 5. 랜덤하게 선택한 의견들을 websocket 메시지로 전송해준다.
-    # 2 ~ 5번의 과정을 갱신 횟수 만큼 반복적으로 시행한다(반복문 사용)
-
     # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
     my_battle_id = json.loads(event['body'])['battleId']
     with PostgresContext(**config.db_config) as psql_ctx:
@@ -282,6 +269,10 @@ def get_new_ads(event, context, wsclient):
     # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
     old_ads = []
     for cnt in range(refresh_cnt):
+        print("Loop %d start" % cnt)
+        if cnt < 2:
+            time.sleep(refresh_time)
+
         # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
         with PostgresContext(**config.db_config) as psql_ctx:
@@ -322,10 +313,7 @@ def get_new_ads(event, context, wsclient):
             }
         )
 
-        if cnt < 2:
-            old_ads = new_ads
-            print("Loop %d finished" % cnt)
-            time.sleep(refresh_time)
+        old_ads = new_ads
 
     response = {
         'stautsCode': 200,
