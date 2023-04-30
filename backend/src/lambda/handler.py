@@ -1,9 +1,9 @@
 import json
 import platform
 import random
-import csv
 import time
 from datetime import datetime
+from copy import deepcopy
 import boto3
 
 from src.game import app
@@ -269,7 +269,6 @@ def get_new_ads(event, context, wsclient):
     # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
     old_ads = []
     for cnt in range(refresh_cnt):
-        print("Loop %d start" % cnt)
         if cnt < 2:
             time.sleep(refresh_time)
 
@@ -288,22 +287,45 @@ def get_new_ads(event, context, wsclient):
             if row[-1] != "CANDIDATE":
                 best3_candidates.append(row[:5])
             else:
-                candidates.append({"userId": row[0], "likes": row[4], "content": row[5]})
+                candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
 
         # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
         # 그 전에 요청 받은 12개 의견들 중 상위 3개 선정
-        new_ads = []
+        tmp = []
         if len(old_ads):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
             for ad in old_ads:
                 ad["likes"] /= refresh_time
             old_ads = sorted(old_ads, key=lambda x: x["likes"], reverse=True)
-            new_ads.extend(old_ads[:3])
+            tmp.extend(old_ads[:3])
 
         # candidates 중 9개 랜덤 선정
         # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
-        new_ads.extend(random.sample(candidates, 9 if len(new_ads) else 12))
+        # 남은 후보가 12개 혹은 9개보다 작으면 모든 후보를 새로운 ads로 선정
+        sampling_number = 12
+        if len(old_ads) and len(candidates) >= 9:
+            sampling_number = 9
+        elif len(candidates) < 9:
+            sampling_number = len(candidates)
+        tmp.extend(random.sample(candidates, sampling_number))
+
+        # status를 CANDIDATE에서 PUBLISHED로 변경
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                for ad in tmp:
+                    ad_order = ad['order']
+                    print("Publishing %d Opinion" % ad_order)
+                    update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" = {ad_order}'
+                    psql_cursor.execute(update_query)
+                    psql_ctx.commit()
+                print("Finish publish #%d" % cnt)
 
         # 5. New Ads 전송
+        new_ads = []
+        for ad in tmp:
+            new_ad = deepcopy(ad)
+            del new_ad['order']
+            new_ads.append(new_ad)
+
         wsclient.send(
             connection_id=event['requestContext']['connectionId'],
             data={
@@ -313,7 +335,7 @@ def get_new_ads(event, context, wsclient):
             }
         )
 
-        old_ads = new_ads
+        old_ads = tmp
 
     response = {
         'stautsCode': 200,
