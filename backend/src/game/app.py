@@ -182,7 +182,7 @@ def get_battles(event, context, wsclient):
                 query = f"select * from DiscussionBattle;"
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
-                print(rows)
+
         result = json.dumps(rows, default=str)
         wsclient.send(
             connection_id=connection_id,
@@ -229,18 +229,22 @@ def get_battle(event, context, wsclient):
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
 
+        result = json.dumps(rows, default=str)
         wsclient.send(
             connection_id=connection_id,
             data={
                 'message': 'Request Success',
-                'battles': rows
+                'battles': result
             }
         )
 
         return {
             "statusCode": 200,
-            "body": json.dumps(rows, indent=4, default=str)
+            "body": json.dumps({
+                "Result": result
+            })
         }
+        
     except Exception as e:
         wsclient.send(
             connection_id=connection_id,
