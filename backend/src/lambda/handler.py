@@ -265,9 +265,9 @@ def get_new_ads(event, context, wsclient):
         with psql_ctx.cursor() as psql_cursor:
             select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
             psql_cursor.execute(select_query)
-            row = eval(psql_cursor.fetchall()[0][0])
+            single_row = eval(psql_cursor.fetchall()[0][0])
 
-            refresh_time, refresh_cnt = row[0], row[1]
+            refresh_time, refresh_cnt = single_row[0], single_row[1]
     
     # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
     old_ads = []
@@ -276,7 +276,6 @@ def get_new_ads(event, context, wsclient):
             time.sleep(refresh_time)
 
         # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
-        # TODO: 같은 팀의 의견을 골라야 한다.
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
         with PostgresContext(**config.db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
@@ -286,15 +285,25 @@ def get_new_ads(event, context, wsclient):
 
         # 3. 'PUBLISHED', 'DROPPED' 의견(best3_candidates)은 승호 형의 best3 반환하는 함수로 넘겨준다.
         #    'CANDIDATE' 의견은 내가 사용한다
+        #    같은 팀의 의견을 찾기 위해 DynamoDB를 같이 사용한다. 아니면 Support와 Opinion을 JOIN 해서 찾는다?(일단 보류)
         best3_candidates, candidates = [], []
+        response = dynamo_db.scan(
+            TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+            FilterExpression="battleID = :battle_id",
+            ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
+            ProjectionExpression="teamID"
+        )['Items']
+
         for row in rows:
-            if row[-1] != "CANDIDATE":
-                best3_candidates.append(row[:5])
-            else:
-                candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
+            for info in response:
+                if info['teamID']['S'] == my_team_id and row[-1] != "CANDIDATE":
+                    best3_candidates.append(row[:5])
+                elif info['teamID']['S'] == my_team_id and row[-1] == "CANDIDATE":
+                    candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
 
         # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
         # 그 전에 요청 받은 12개 의견들 중 상위 3개 선정
+        # TODO: 그런데 메세지로 보내줄 때는 단위 시간당 계산 결과가 아니라 DB 저장된 값을 돌려주기로 했다. 이에 대한 수정이 필요하다.
         tmp = []
         if len(old_ads):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
             for ad in old_ads:
