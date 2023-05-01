@@ -8,14 +8,17 @@ module.exports = {
           'back-color' : '#29476E', // 남색 배경
           'background-color' : '#EAEAEA', // 회색 배경
           'sendBtn' : '#F4452F',
-          'card-normal' : '#FCE6E2',
-          'card-text' : '#F95150',
+          'card-normal-A' : '#FCE6E2',
+          'card-normal-B' : '#EEEFFF',
+          'card-text-A' : '#F95150',
+          'card-text-B' : '#322BDE',
         },
         backgroundImage: {
           'battleBar' : "url('./images/battleBar.png')",
           'like' : "url('./images/like.svg')",
           'star' : "url('./images/star.svg')",
-          'bestLikes' : "url('./images/bestLikes.svg')",
+          'bestLikesA' : "url('./images/bestLikesA.svg')",
+          'bestLikesB' : "url('./images/bestLikesB.svg')",
         },
         backgroundSize:{
           'navBar' : '100%',
@@ -50,6 +53,7 @@ module.exports = {
           'aboveBest':'5%',
           'navBar' : '21%',
           'aboveAds' : '7%',
+          'opinion' : '11%',
         },
         margin:{
           'navBar' : '21%',
