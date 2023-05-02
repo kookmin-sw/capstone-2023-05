@@ -15,6 +15,7 @@ from src.utility.websocket import wsclient
 
 
 dynamo_db = boto3.client(**config.dynamo_db_config)
+psql_ctx = PostgresContext(**config.db_config)
 
 
 @cors
@@ -256,18 +257,12 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
-    # TODO: PostgreSQL query 실행하는 코드가 여러 번 반복해서 나타난다.
-    # 이를 줄이기 위해 insert, delete, select, update 등의 함수로 만들 수 없을까?
-    
     # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
     my_battle_id = json.loads(event['body'])['battleId']
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
-            psql_cursor.execute(select_query)
-            single_row = eval(psql_cursor.fetchall()[0][0])
-
-            refresh_time, refresh_cnt = single_row[0], single_row[1]
+    select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
+    rows = psql_ctx.execute_query(select_query)
+    single_row = eval(rows[0][0])
+    refresh_time, refresh_cnt = single_row[0], single_row[1]
     
     # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
     old_ads = []
@@ -277,11 +272,8 @@ def get_new_ads(event, context, wsclient):
 
         # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
-        with PostgresContext(**config.db_config) as psql_ctx:
-            with psql_ctx.cursor() as psql_cursor:
-                select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
-                psql_cursor.execute(select_query)
-                rows = psql_cursor.fetchall()
+        select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
+        rows = psql_ctx.execute_query(select_query)
 
         # 3. 'PUBLISHED', 'DROPPED' 의견(best3_candidates)은 승호 형의 best3 반환하는 함수로 넘겨준다.
         #    'CANDIDATE' 의견은 내가 사용한다
@@ -312,11 +304,8 @@ def get_new_ads(event, context, wsclient):
         
             # 기존의 PUBLISHED 의견 중 상위 3개에 들지 못한 의견들은 DROPPED로 status 변경
             orders = [str(ad['order']) for ad in old_ads[3:]]
-            with PostgresContext(**config.db_config) as psql_ctx:
-                with psql_ctx.cursor() as psql_cursor:
-                    update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(orders)})'
-                    psql_cursor.execute(update_query)
-                    psql_ctx.commit()
+            update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(orders)})'
+            psql_ctx.execute_query(update_query)
 
         # candidates 중 9개 랜덤 선정
         # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
@@ -330,11 +319,8 @@ def get_new_ads(event, context, wsclient):
 
         # status를 CANDIDATE에서 PUBLISHED로 변경
         orders = [str(ad['order']) for ad in tmp]
-        with PostgresContext(**config.db_config) as psql_ctx:
-            with psql_ctx.cursor() as psql_cursor:
-                update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(orders)})'
-                psql_cursor.execute(update_query)
-                psql_ctx.commit()
+        update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(orders)})'
+        psql_ctx.execute_query(update_query)
 
         # 5. New Ads 전송
         new_ads = []
