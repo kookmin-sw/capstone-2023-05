@@ -2,6 +2,7 @@ import json
 import platform
 import time
 from datetime import datetime
+from psycopg2.errors import ForeignKeyViolation as fk_violation
 import boto3
 
 from src.game import app
@@ -113,7 +114,7 @@ def init_join_handler(event, context, wsclient):
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT teamid, name FROM team WHERE battleid = \'{battle_id}\'"
+            select_query = f"SELECT \"teamId\", name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
             psql_cursor.execute(select_query)
             rows = psql_cursor.fetchall()
             team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
@@ -154,13 +155,37 @@ def send_handler(event, context, wsclient):
             break
     if my_info is None:
         return {
-            'statusCode': 404,
+            'statusCode': 400,
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
-    
-    # 같은 팀에게 자신의 의견을 broadcasting 한다.
+
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    round, num_of_likes = json.loads(event['body'])['round'], 0
     opinion = json.loads(event['body'])['opinion']
+    status = "CANDIDATE"
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
+    try:
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", \"content\", \"time\", status) VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
+                psql_cursor.execute(insert_query)
+                psql_ctx.commit()
+    except fk_violation:
+        wsclient.send(
+                connection_id=my_connection_id,
+                data={
+                    "action": "recvOpinion",
+                    "nickname": "MASTER",
+                    "opinion": "You send malformed data."
+                }
+            )
+        return {
+            'statusCode': 400,
+            'body': 'You tried insert malformed data into DB'
+        }
+
+    # 같은 팀에게 자신의 의견을 broadcasting 한다.
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
@@ -172,17 +197,6 @@ def send_handler(event, context, wsclient):
                     "opinion": opinion
                 }
             )
-
-    # PK: userId, battleId, roundNo, time
-    # extra fields: noOfLikes, content, status
-    round, num_of_likes = json.loads(event['body'])['round'], 0
-    status = "CANDIDATE"
-
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
@@ -206,6 +220,25 @@ def vote_handler(event, context, wsclient):
     battle_id, user_id, nickname = response[0]['battleID']['S'], response[0]['userID']['S'], response[0]['nickname']['S']
     team_id = json.loads(event['body'])['teamId']
 
+    # Support 테이블에 팀 선택 기록 저장
+    try:
+        round = json.loads(event['body'])['round']
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+                psql_cursor.execute(insert_query)
+                psql_ctx.commit()
+    except fk_violation:
+        wsclient.send(
+                connection_id=connection_id,
+                data={
+                    "action": "voteResult",
+                    "result": "fail",
+                    "teamId": "None",
+                    "teamName": "You send malformed data."
+                }
+            )
+        
     # DynamoDB에 팀 선택 결과 반영
     dynamo_db.put_item(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
@@ -221,7 +254,7 @@ def vote_handler(event, context, wsclient):
     # 팀 이름을 찾기 위한 SQL문 실행
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\' and teamid = \'{team_id}\'"
+            select_query = f"SELECT name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\' and \"teamId\" = \'{team_id}\'"
             psql_cursor.execute(select_query)
             row = psql_cursor.fetchall()
             team_name = row[0][0]
@@ -236,14 +269,6 @@ def vote_handler(event, context, wsclient):
             "teamName": team_name
         }
     )
-    
-    # Support 테이블에 팀 선택 기록 저장
-    round = json.loads(event['body'])['round']
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Support VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
