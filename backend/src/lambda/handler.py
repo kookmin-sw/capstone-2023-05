@@ -265,12 +265,10 @@ def get_new_ads(event, context, wsclient):
     refresh_time, refresh_cnt = single_row[0], single_row[1]
     
     old_ads = []
-    for cnt in range(refresh_cnt):
-        if cnt < 2:
-            time.sleep(refresh_time)
+    for _ in range(refresh_cnt):
+        time.sleep(refresh_time)
 
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
-        # select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
         select_query = f"""SELECT (\"Opinion\".\"userId\",\"Opinion\".\"battleId\",\"Opinion\".\"roundNo\",\"Opinion\".\"order\",\"Opinion\".\"noOfLikes\",\"Opinion\".\"content\",\"Opinion\".status,\"Support\".vote) FROM \"Opinion\", \"Support\" 
         WHERE \"Opinion\".\"userId\" = \"Support\".\"userId\" and \"Opinion\".\"battleId\" = \'{my_battle_id}\' and \"Support\".\"battleId" = \'{my_battle_id}\' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round} and status != \'REPORTED\'"""
         rows = psql_ctx.execute_query(select_query)
