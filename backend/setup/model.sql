@@ -5,17 +5,17 @@ CREATE TABLE "User" (
   "userId" varchar(50) NOT NULL,
   "passwd" bytea NOT NULL,
   "nickname" varchar(50) NOT NULL,
-  profile varchar(50) NULL,
+  "profile" varchar(50) NULL,
   CONSTRAINT PK_USER_ID PRIMARY KEY ("userId")
 );
 CREATE TABLE "DiscussionBattle" (
   "battleId" varchar(6) NOT NULL,
   "ownerId" varchar(50) NOT NULL,
   "title" varchar(50) NOT NULL,
-  status battle_status NOT NULL,
+  "status" battle_status NOT NULL,
   "startTime" timestamp NULL,
   "endTime" timestamp NULL,
-  description varchar(100) NULL,
+  "description" varchar(100) NULL,
   "refreshPeriod"  integer NOT NULL,
   "maxNoOfRefresh" integer NOT NULL,
   "maxNoOfRounds" integer NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE "Round" (
   "roundNo" serial NOT NULL,
   "startTime" timestamp NULL,
   "endTime" timestamp NULL,
-  description varchar(100) NULL,
+  "description" varchar(100) NULL,
   CONSTRAINT PK_ROUND_ID PRIMARY KEY ("battleId", "roundNo"),
   CONSTRAINT FK_1 FOREIGN KEY ("battleId") REFERENCES "DiscussionBattle" ("battleId")
 );
@@ -41,7 +41,7 @@ CREATE TABLE "Opinion" (
   "noOfLikes" integer NOT NULL,
   "content" varchar(150) NOT NULL,
   "time" timestamp NOT NULL,
-  status opinion_status NOT NULL,
+  "status" opinion_status NOT NULL,
   CONSTRAINT PK_OPINION_ID PRIMARY KEY ("userId", "battleId", "roundNo", "order"),
   CONSTRAINT FK_2 FOREIGN KEY ("battleId", "roundNo") REFERENCES "Round" ("battleId", "roundNo"),
   CONSTRAINT FK_3 FOREIGN KEY ("userId") REFERENCES "User" ("userId")
@@ -49,8 +49,8 @@ CREATE TABLE "Opinion" (
 CREATE TABLE "Team" (
   "teamId" serial NOT NULL,
   "battleId" varchar(6) NOT NULL,
-  name varchar(50) NOT NULL,
-  image bytea NOT NULL,
+  "name" varchar(50) NOT NULL,
+  "image" bytea NOT NULL,
   CONSTRAINT PK_TEAM_ID PRIMARY KEY ("teamId"),
   CONSTRAINT FK_4 FOREIGN KEY ("battleId") REFERENCES "DiscussionBattle" ("battleId")
 );
@@ -58,11 +58,11 @@ CREATE TABLE "Support" (
   "userId" varchar(50) NOT NULL,
   "battleId" varchar(6) NOT NULL,
   "roundNo" serial NOT NULL,
-  vote serial NOT NULL,
+  "vote" serial NOT NULL,
   "time" timestamp NOT NULL,
   CONSTRAINT PK_SUPPORT_ID PRIMARY KEY ("userId", "battleId", "roundNo"),
   CONSTRAINT FK_5 FOREIGN KEY ("userId") REFERENCES "User" ("userId"),
-  CONSTRAINT FK_6 FOREIGN KEY (vote) REFERENCES "Team" ("teamId"),
+  CONSTRAINT FK_6 FOREIGN KEY ("vote") REFERENCES "Team" ("teamId"),
   CONSTRAINT FK_7 FOREIGN KEY ("battleId", "roundNo") REFERENCES "Round" ("battleId", "roundNo")
 );
 
@@ -75,7 +75,7 @@ VALUES
     ('ho@kookmin.ac.kr', E'\\x686f313233', 'lsh', 'www.example.com/ho/profile'),
     ('wuk@kookmin.ac.kr', E'\\x77756b313233', 'ljw', 'www.example.com/ljw/profile');
 
-INSERT INTO "DiscussionBattle" ("battleId", "ownerId", "title", status, "startTime", "endTime", description, "refreshPeriod", "maxNoOfRefresh", "maxNoOfRounds", "maxNoOfVotes", "maxNoOfOpinion")
+INSERT INTO "DiscussionBattle" ("battleId", "ownerId", "title", "status", "startTime", "endTime", "description", "refreshPeriod", "maxNoOfRefresh", "maxNoOfRounds", "maxNoOfVotes", "maxNoOfOpinion")
 VALUES 
     ('ABC123', 'joon@kookmin.ac.kr', 'Which is many? door or wheel', 'BEFORE_OPEN', '2023-05-01 12:00:00', '2023-05-31 12:00:00', 'Our first battle', 300, 10, 3, 10, 50);
 
