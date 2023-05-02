@@ -303,12 +303,11 @@ def get_new_ads(event, context, wsclient):
 
         # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
         # 그 전에 요청 받은 12개 의견들 중 상위 3개 선정
-        # TODO: 그런데 메세지로 보내줄 때는 단위 시간당 계산 결과가 아니라 DB 저장된 값을 돌려주기로 했다. 이에 대한 수정이 필요하다.
         tmp = []
         if len(old_ads):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
             for ad in old_ads:
-                ad["likes"] /= refresh_time
-            old_ads = sorted(old_ads, key=lambda x: x["likes"], reverse=True)
+                ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
+            old_ads = sorted(old_ads, key=lambda x: x["likes_per_refresh_time"], reverse=True)
             tmp.extend(old_ads[:3])
         
             # 기존의 PUBLISHED 의견 중 상위 3개에 들지 못한 의견들은 DROPPED로 status 변경
@@ -342,6 +341,8 @@ def get_new_ads(event, context, wsclient):
         for ad in tmp:
             new_ad = deepcopy(ad)
             del new_ad['order']
+            if 'likes_per_refresh_time' in new_ad:
+                del new_ad['likes_per_refresh_time']
             new_ads.append(new_ad)
 
         wsclient.send(
