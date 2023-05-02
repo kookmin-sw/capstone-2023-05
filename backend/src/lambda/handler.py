@@ -257,26 +257,21 @@ def vote_handler(event, context, wsclient):
 
 @wsclient
 def get_new_ads(event, context, wsclient):
-    # 1. 갱신 단위 시간, 갱신 횟수를 "DiscussionBattle" 테이블에서 찾는다
     my_battle_id = json.loads(event['body'])['battleId']
     select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
     rows = psql_ctx.execute_query(select_query)
     single_row = eval(rows[0][0])
     refresh_time, refresh_cnt = single_row[0], single_row[1]
     
-    # 갱신 횟수 만큼 반복문 실행, 한 번의 반복이 끝날 때마다 갱신 단위 시간만큼 sleep
     old_ads = []
     for cnt in range(refresh_cnt):
         if cnt < 2:
             time.sleep(refresh_time)
 
-        # 2. "Opinion" 테이블에서 아래의 조건에 모두 부합하는 의견을 얻는다
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
         select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
         rows = psql_ctx.execute_query(select_query)
 
-        # 3. 'PUBLISHED', 'DROPPED' 의견(best3_candidates)은 승호 형의 best3 반환하는 함수로 넘겨준다.
-        #    'CANDIDATE' 의견은 내가 사용한다
         #    같은 팀의 의견을 찾기 위해 DynamoDB를 같이 사용한다. 아니면 Support와 Opinion을 JOIN 해서 찾는다?(일단 보류)
         best3_candidates, candidates = [], []
         response = dynamo_db.scan(
@@ -293,8 +288,7 @@ def get_new_ads(event, context, wsclient):
                 elif info['teamID']['S'] == my_team_id and row[-1] == "CANDIDATE":
                     candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
 
-        # 4. CANDIDATE 의견들 중에서 랜덤하게 9개(12개)를 선택한다.
-        # 그 전에 요청 받은 12개 의견들 중 상위 3개 선정
+        # 요청 받은 12개 의견들 중 상위 3개 선정
         tmp = []
         if len(old_ads):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
             for ad in old_ads:
@@ -302,14 +296,11 @@ def get_new_ads(event, context, wsclient):
             old_ads = sorted(old_ads, key=lambda x: x["likes_per_refresh_time"], reverse=True)
             tmp.extend(old_ads[:3])
         
-            # 기존의 PUBLISHED 의견 중 상위 3개에 들지 못한 의견들은 DROPPED로 status 변경
             orders = [str(ad['order']) for ad in old_ads[3:]]
             update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(orders)})'
             psql_ctx.execute_query(update_query)
 
         # candidates 중 9개 랜덤 선정
-        # 만약 처음 요청하는 거면 12개의 새로운 Ads를 줘야 하므로 12개 랜덤 선정
-        # 남은 후보가 12개 혹은 9개보다 작으면 모든 후보를 새로운 ads로 선정
         sampling_number = 12
         if len(old_ads) and len(candidates) >= 9:
             sampling_number = 9
@@ -317,12 +308,10 @@ def get_new_ads(event, context, wsclient):
             sampling_number = len(candidates)
         tmp.extend(random.sample(candidates, sampling_number))
 
-        # status를 CANDIDATE에서 PUBLISHED로 변경
         orders = [str(ad['order']) for ad in tmp]
         update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(orders)})'
         psql_ctx.execute_query(update_query)
 
-        # 5. New Ads 전송
         new_ads = []
         for ad in tmp:
             new_ad = deepcopy(ad)
