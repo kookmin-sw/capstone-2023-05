@@ -269,24 +269,34 @@ def get_new_ads(event, context, wsclient):
             time.sleep(refresh_time)
 
         my_battle_id, my_team_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['teamId'], json.loads(event['body'])['round']
-        select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
+        # select_query = f'SELECT * FROM \"Opinion\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {curr_round} and status != \'REPORTED\''
+        select_query = f"""SELECT (\"Opinion\".\"userId\",\"Opinion\".\"battleId\",\"Opinion\".\"roundNo\",\"Opinion\".\"order\",\"Opinion\".\"noOfLikes\",\"Opinion\".\"content\",\"Opinion\".status,\"Support\".vote) FROM \"Opinion\", \"Support\" 
+        WHERE \"Opinion\".\"userId\" = \"Support\".\"userId\" and \"Opinion\".\"battleId\" = \'{my_battle_id}\' and \"Support\".\"battleId" = \'{my_battle_id}\' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round} and status != \'REPORTED\'"""
         rows = psql_ctx.execute_query(select_query)
+        print(rows)
+        # TODO: rows look like under.
+        # [('(wuk@kookmin.ac.kr,ABC123,1,10,0,"Opinion 9",CANDIDATE,1)',), ('(wuk@kookmin.ac.kr,ABC123,1,10,0,"Opinion 9",CANDIDATE,1)',), ...]
 
         #    같은 팀의 의견을 찾기 위해 DynamoDB를 같이 사용한다. 아니면 Support와 Opinion을 JOIN 해서 찾는다?(일단 보류)
         best3_candidates, candidates = [], []
-        response = dynamo_db.scan(
-            TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
-            FilterExpression="battleID = :battle_id",
-            ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
-            ProjectionExpression="teamID"
-        )['Items']
+        # response = dynamo_db.scan(
+        #     TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        #     FilterExpression="battleID = :battle_id",
+        #     ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
+        #     ProjectionExpression="teamID"
+        # )['Items']
 
+        # for row in rows:
+        #     for info in response:
+        #         if info['teamID']['S'] == my_team_id and row[-1] != "CANDIDATE":
+        #             best3_candidates.append(row[:5])
+        #         elif info['teamID']['S'] == my_team_id and row[-1] == "CANDIDATE":
+        #             candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
         for row in rows:
-            for info in response:
-                if info['teamID']['S'] == my_team_id and row[-1] != "CANDIDATE":
-                    best3_candidates.append(row[:5])
-                elif info['teamID']['S'] == my_team_id and row[-1] == "CANDIDATE":
-                    candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
+            if row[-1] == my_team_id and row[-2] != "CANDIDATE":
+                best3_candidates.append(row[:5])
+            elif row[-1] == my_team_id and row[-2] == "CANDIDATE":
+                candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
 
         # 요청 받은 12개 의견들 중 상위 3개 선정
         tmp = []
