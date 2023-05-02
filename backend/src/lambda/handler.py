@@ -1,6 +1,7 @@
 import json
 import platform
 import random
+import csv
 import time
 from datetime import datetime
 from copy import deepcopy
@@ -273,26 +274,12 @@ def get_new_ads(event, context, wsclient):
         select_query = f"""SELECT (\"Opinion\".\"userId\",\"Opinion\".\"battleId\",\"Opinion\".\"roundNo\",\"Opinion\".\"order\",\"Opinion\".\"noOfLikes\",\"Opinion\".\"content\",\"Opinion\".status,\"Support\".vote) FROM \"Opinion\", \"Support\" 
         WHERE \"Opinion\".\"userId\" = \"Support\".\"userId\" and \"Opinion\".\"battleId\" = \'{my_battle_id}\' and \"Support\".\"battleId" = \'{my_battle_id}\' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round} and status != \'REPORTED\'"""
         rows = psql_ctx.execute_query(select_query)
-        print(rows)
-        # TODO: rows look like under.
-        # [('(wuk@kookmin.ac.kr,ABC123,1,10,0,"Opinion 9",CANDIDATE,1)',), ('(wuk@kookmin.ac.kr,ABC123,1,10,0,"Opinion 9",CANDIDATE,1)',), ...]
 
-        #    같은 팀의 의견을 찾기 위해 DynamoDB를 같이 사용한다. 아니면 Support와 Opinion을 JOIN 해서 찾는다?(일단 보류)
+        # 같은 팀의 의견을 찾기 위해 Support와 Opinion을 JOIN 해서 찾는다.
         best3_candidates, candidates = [], []
-        # response = dynamo_db.scan(
-        #     TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
-        #     FilterExpression="battleID = :battle_id",
-        #     ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
-        #     ProjectionExpression="teamID"
-        # )['Items']
-
-        # for row in rows:
-        #     for info in response:
-        #         if info['teamID']['S'] == my_team_id and row[-1] != "CANDIDATE":
-        #             best3_candidates.append(row[:5])
-        #         elif info['teamID']['S'] == my_team_id and row[-1] == "CANDIDATE":
-        #             candidates.append({"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]})
         for row in rows:
+            f = csv.reader([row[0]], delimiter=',', quotechar='\"')
+            row = next(f); row[0] = row[0][1:]; row[2] = int(row[2]); row[3] = int(row[3]); row[4] = int(row[4]); row[-1] = row[-1][:-1]
             if row[-1] == my_team_id and row[-2] != "CANDIDATE":
                 best3_candidates.append(row[:5])
             elif row[-1] == my_team_id and row[-2] == "CANDIDATE":
