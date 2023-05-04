@@ -114,6 +114,11 @@ functions:
     events:
       - websocket:
           route: vote
+  like-handler:
+    handler: src/lambda/handler.like_handler
+    events:
+      - websocket:
+          route: like
 
 custom:
   customDomain:
