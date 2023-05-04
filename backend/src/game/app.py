@@ -213,6 +213,7 @@ def vote_handler(event, context, wsclient):
 
 
 def get_new_ads(event, context, wsclient):
+    # 토론의 Host와 라운드의 갱신 주기, 갱신 횟수 얻기
     my_battle_id = json.loads(event['body'])['battleId']
     select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
     rows = psql_ctx.execute_query(select_query)
@@ -220,15 +221,18 @@ def get_new_ads(event, context, wsclient):
     single_row = next(f); single_row[0] = int(single_row[0][1:]); single_row[1] = int(single_row[1]); single_row[2] = single_row[2][:-1]
     refresh_time, refresh_cnt, owner_id = single_row
     
+    # 토론의 팀 ID 값 얻기
     select_query = f"SELECT \"teamId\" FROM \"Team\" WHERE \"battleId\" = \'{my_battle_id}\'"
     team_ids = [row[0] for row in psql_ctx.execute_query(select_query)]
 
-    paginator = dynamo_db.get_paginator('scan')
-    connections, information = [], []
-    for page in paginator.paginate(TableName=config.DYNAMODB_WS_CONNECTION_TABLE):
-        connections.extend(page['Items'])
-    for connection in connections:
-        information.append({"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']})
+    # 토론에 참여하고 있는 connection들 얻기
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="battleID = :battle_id",
+        ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
+        ProjectionExpression="connectionID,userID,teamID"
+    )['Items']
+    information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']} for connection in response]
 
     old_ads = [[], []]
     for _ in range(refresh_cnt):
@@ -256,26 +260,20 @@ def get_new_ads(event, context, wsclient):
                     best3_candidates[1].append(row[:5])
                 else:
                     candidates[1].append(return_info)
-        print("Team idx 0의 베스트 3 후보들:", best3_candidates[0], "\n")
-        print("Team idx 1의 베스트 3 후보들:", best3_candidates[1], "\n")
-        print("Team idx 0의 새로운 ads 후보들:", candidates[0], "\n")
-        print("Team idx 1의 새로운 ads 후보들:", candidates[1], "\n")
 
         sampling_number = 12
         tmp = [[], []]
-        orders = []
+        publish_orders = []
         for idx in range(len(old_ads)):
             # 요청 받은 12개 의견들 중 상위 3개 선정
             if len(old_ads[idx]):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
-                
-                # TODO: 여기 코드를 수정했으니 이에 대해 테스트를 진행할 것
                 old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
             
-                orders = [str(ad['order']) for ad in old_ads[idx][3:]]
-                update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(orders)})'
+                drop_orders = [str(ad['order']) for ad in old_ads[idx][3:]]
+                update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
                 psql_ctx.execute_query(update_query)
 
             # candidates 중 9개 랜덤 선정
@@ -283,13 +281,11 @@ def get_new_ads(event, context, wsclient):
                 sampling_number = 9
             elif len(old_ads[idx]) and len(candidates[idx]) < 9:
                 sampling_number = len(candidates[idx])
-            print("Numbers of new ads:", sampling_number)
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
-
             for ad in tmp[idx]:
-                orders.append(str(ad['order']))
+                publish_orders.append(str(ad['order']))
 
-        update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(orders)})'
+        update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
         psql_ctx.execute_query(update_query)
 
         new_ads = [[], []]
