@@ -212,7 +212,7 @@ def vote_handler(event, context, wsclient):
     return response
 
 
-def get_new_ads(event, context, wsclient):
+def preparation_start_handler(event, context, wsclient):
     # 토론의 Host와 라운드의 갱신 주기, 갱신 횟수 얻기
     my_battle_id = json.loads(event['body'])['battleId']
     select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''

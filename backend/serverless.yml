@@ -119,11 +119,11 @@ functions:
       - websocket:
           route: vote
 
-  get-new-ads-handler:
-    handler: src/lambda/handler.get_new_ads
+  preparation-start-handler:
+    handler: src/lambda/handler.preparation_start_handler
     events:
       - websocket:
-          route: getNewAds
+          route: preparationStart
     timeout: 100
 
 custom:

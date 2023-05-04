@@ -71,5 +71,5 @@ def vote_handler(event, context, wsclient):
 
 
 @wsclient
-def get_new_ads(event, context, wsclient):
-    return app.get_new_ads(event, context, wsclient)
+def preparation_start_handler(event, context, wsclient):
+    return app.preparation_start_handler(event, context, wsclient)
