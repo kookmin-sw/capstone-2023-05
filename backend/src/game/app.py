@@ -57,7 +57,7 @@ def create_battle(event, context, wsclient):
                 battle_id = id_generator()
 
                 # Checking Duplicate IDs
-                duplicate_check_query = f"""SELECT battleid from discussionbattle"""
+                duplicate_check_query = f"""SELECT \"battleId\" from \"DiscussionBattle\";"""
                 psql_cursor.execute(duplicate_check_query)
                 query_result = psql_cursor.fetchall()
                 existing_battle_ids = [result[0] for result in query_result]
@@ -66,30 +66,17 @@ def create_battle(event, context, wsclient):
                     battle_id = id_generator()
 
                 # Create Battle
-                psql_cursor.execute(f"""INSERT INTO DiscussionBattle(
-                    battleId,
-                    ownerId,
-                    title,
-                    status,
-                    visibility,
-                    switchChance,
-                    startTime,
-                    endTime,
-                    description,
-                    maxNoOfRounds,
-                    maxNoOfVotes,
-                    maxNoOfOpinion
-                ) VALUES (
+                psql_cursor.execute(f"""INSERT INTO \"DiscussionBattle\" VALUES (
                     \'{battle_id}\',
                     \'{body['ownerId']}\',
                     \'{body['title']}\',
                     \'BEFORE_OPEN\',
-                    \'{body['visibility']}\',
-                    \'{body['switchChance']}\',
                     null,
                     null,
                     \'{body['description']}\',
-                    0,
+                    \'{body['refreshPeriod']}\',
+                    \'{body['maxNoOfRefresh']}\',
+                    \'{body['maxNoOfRounds']}\',
                     \'{body['maxNoOfVotes']}\',
                     \'{body['maxNoOfOpinion']}\'
                 )
@@ -99,36 +86,30 @@ def create_battle(event, context, wsclient):
                 for round_no in range(1, body['maxNoOfRounds'] + 1):
                     psql_cursor.execute(
                         f"""
-                            INSERT INTO ROUND(
-                                battleId,
-                                roundNo,
-                                startTime,
-                                endTime,
-                                description
-                            ) VALUES (
+                            INSERT INTO \"Round\" 
+                            VALUES (
                                 \'{battle_id}\',
                                 \'{round_no}\',
                                 null,
                                 null,
                                 \'{'description'}'
                             )
+                            RETURNING *;
                         """
                     )
 
                 # Create 2 Teams
                 for team_name in (team_name_a, team_name_b):
                     psql_cursor.execute(
-                        f"""INSERT INTO Team(
-                                teamId,
-                                battleId,
-                                name,
-                                image
-                            ) VALUES (
+                        f"""INSERT INTO \"Team\" 
+                        
+                        VALUES (
                                 DEFAULT,
                                 \'{battle_id}\',
                                 \'{team_name}\',
                                 \'{"www.naver.com"}\'
                             )
+                            RETURNING *;
                         """
                     )
 
@@ -179,7 +160,7 @@ def get_battles(event, context, wsclient):
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                query = f"select * from DiscussionBattle;"
+                query = f"select * from \"DiscussionBattle\";"
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
 
@@ -225,7 +206,7 @@ def get_battle(event, context, wsclient):
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                query = f"""select * from DiscussionBattle where battleid=\'{battle_id}\'"""
+                query = f"""select * from \"DiscussionBattle\" where \"battleId\"=\'{battle_id}\'"""
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
 
@@ -272,7 +253,7 @@ def start_battle(event, context, wsclient):
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                query = f"""UPDATE discussionbattle SET status='RUNNING', startTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;"""
+                query = f"""UPDATE \"DiscussionBattle\" SET \"status\"='RUNNING', \"startTime\"=NOW() WHERE \"battleId\"=\'{battle_id}\' RETURNING *;"""
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
@@ -321,7 +302,7 @@ def end_battle(event, context, wsclient):
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                query = f"""UPDATE discussionbattle SET status='CLOSED', endTime=NOW() WHERE battleid=\'{battle_id}\' RETURNING *;"""
+                query = f"""UPDATE \"DiscussionBattle\" SET \"status\"='CLOSED', \"endTime\"=NOW() WHERE \"battleId\"=\'{battle_id}\' RETURNING *;"""
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
@@ -369,9 +350,9 @@ def start_round(event, context, wsclient):
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 round_query = f"""
-                            UPDATE Round
-                            SET startTime = NOW()
-                            WHERE battleId = \'{battle_id}\' AND roundNo = {current_round}
+                            UPDATE \"Round\"
+                            SET \"startTime\" = NOW()
+                            WHERE \"battleId\" = \'{battle_id}\' AND \"roundNo\" = {current_round}
                             RETURNING *;
                         """
                 psql_cursor.execute(round_query)
@@ -419,9 +400,8 @@ def end_round(event, context, wsclient):
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 round_query = f"""
-                        UPDATE Round
-                        SET endTime = NOW()
-                        WHERE battleId = \'{battle_id}\' AND roundNo = \'{current_round}\'
+                        UPDATE \"Round\"
+                        SET \"endTime\" = NOW() WHERE \"battleId\" = \'{battle_id}\' AND \"roundNo\" = \'{current_round}\'
                         RETURNING *;
                     """
                 psql_cursor.execute(round_query)

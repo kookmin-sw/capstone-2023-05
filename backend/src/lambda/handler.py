@@ -112,7 +112,6 @@ def disconnect_handler(event, context):
         ProjectionExpression="battleID,connectionID"
     )['Items']
     battle_id = response[0]['battleID']['S']
-
     dynamo_db.delete_item(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
         Key={
@@ -120,7 +119,6 @@ def disconnect_handler(event, context):
             'connectionID': {'S': connection_id}
         }
     )
-
     return {
         'statusCode': 200,
         'body': json.dumps({'message': "Delete connection from DB"})
@@ -129,69 +127,53 @@ def disconnect_handler(event, context):
 
 @wsclient
 def init_join_handler(event, context, wsclient):
-    try:
-        connection_id = event['requestContext']['connectionId']
+    connection_id = event['requestContext']['connectionId']
 
-        data = json.loads(event['body'])
-        battle_id = data['battleId']
-        nickname = data['nickname']
-        user_id = data['userId']
-        team_id = ""
+    data = json.loads(event['body'])
+    battle_id = data['battleId']
+    nickname = data['nickname']
+    user_id = data['userId']
+    team_id = ""
 
-        # DynamoDB에 정보 등록
-        dynamo_db.put_item(
-            TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
-            Item={
-                'connectionID': {'S': connection_id},
-                'battleID': {'S': battle_id},
-                'teamID': {'S': team_id},
-                'userID': {'S': user_id},
-                'nickname': {'S': nickname}
-            }
-        )
-
-        # 어떤 팀이 있는지 RDS에서 정보 가져오기
-        with PostgresContext(**config.db_config) as psql_ctx:
-            with psql_ctx.cursor() as psql_cursor:
-                select_query = f"SELECT name FROM team WHERE battleid = \'{battle_id}\'"
-                psql_cursor.execute(select_query)
-                rows = psql_cursor.fetchall()
-                team_names = [row for row in rows]
-
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                'message': 'Join Request Success',
-                'teams': team_names
-            }
-        )
-
-        response = {
-            'statusCode': 200,
-            'body': 'Join Request Success'
+    # DynamoDB에 정보 등록
+    dynamo_db.put_item(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        Item={
+            'connectionID': {'S': connection_id},
+            'battleID': {'S': battle_id},
+            'teamID': {'S': team_id},
+            'userID': {'S': user_id},
+            'nickname': {'S': nickname}
         }
+    )
 
-    except Exception as e:
-        print(e)
-        connection_id = event['requestContext']['connectionId']
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                "error": e
-            }
-        )
-        return {
-            'statusCode': 400,
-            "body": str(e)
+    # 어떤 팀이 있는지 RDS에서 정보 가져오기
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            select_query = f"SELECT \"teamId\", \"name\" FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
+            psql_cursor.execute(select_query)
+            rows = psql_cursor.fetchall()
+            team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
+    
+    wsclient.send(
+        connection_id=connection_id,
+        data={
+            'action': 'initJoinResult',
+            'result': 'success',
+            'teams': team_names
         }
+    )
 
+    response = {
+        'statusCode': 200,
+        'body': 'Join Request Success'
+    }
     return response
-
+    
 
 @wsclient
 def send_handler(event, context, wsclient):
     opinion_time = datetime.fromtimestamp(time.time())
-
     # DynamoDB의 모든 값을 얻어온다.
     paginator = dynamo_db.get_paginator('scan')
     connections = []
@@ -217,18 +199,19 @@ def send_handler(event, context, wsclient):
             'statusCode': 404,
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
-
+    
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
     opinion = json.loads(event['body'])['opinion']
-    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info[
-        'battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
+    user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
             wsclient.send(
                 connection_id=other_connection,
                 data={
-                    "data": f"{nickname}: {opinion}",
+                    "action": "recvOpinion",
+                    "nickname": nickname,
+                    "opinion": opinion
                 }
             )
 
@@ -239,12 +222,74 @@ def send_handler(event, context, wsclient):
 
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO Opinion VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
+            insert_query = f'INSERT INTO \"Opinion\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
             psql_cursor.execute(insert_query)
             psql_ctx.commit()
 
     response = {
         'statusCode': 200,
         'body': 'Send Success'
+    }
+    return response
+
+
+@wsclient
+def vote_handler(event, context, wsclient):
+    vote_time = datetime.fromtimestamp(time.time())
+    connection_id = event['requestContext']['connectionId']
+
+    # DynamoDB에서 유저 정보 찾기
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="connectionID = :connection_id",
+        ExpressionAttributeValues={":connection_id": {"S": connection_id}},
+        ProjectionExpression="battleID,connectionID,nickname,userID"
+    )['Items']
+    print(response)
+    battle_id, user_id, nickname = response[0]['battleID']['S'], response[0]['userID']['S'], response[0]['nickname']['S']
+    team_id = json.loads(event['body'])['teamId']
+
+    # DynamoDB에 팀 선택 결과 반영
+    dynamo_db.put_item(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        Item={
+            'connectionID': {'S': connection_id},
+            'battleID': {'S': battle_id},
+            'teamID': {'S': str(team_id)},
+            'userID': {'S': user_id},
+            'nickname': {'S': nickname}
+        }
+    )
+
+    # 팀 이름을 찾기 위한 SQL문 실행
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            select_query = f"SELECT \"name\" FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\' and \"teamId\" = \'{team_id}\'"
+            psql_cursor.execute(select_query)
+            row = psql_cursor.fetchall()
+            team_name = row[0][0]
+
+    # 팀 선택 결과 전송
+    wsclient.send(
+        connection_id=connection_id,
+        data={
+            "action": "voteResult",
+            "result": "success",
+            "teamId": team_id,
+            "teamName": team_name
+        }
+    )
+    
+    # Support 테이블에 팀 선택 기록 저장
+    round = json.loads(event['body'])['round']
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+            psql_cursor.execute(insert_query)
+            psql_ctx.commit()
+
+    response = {
+        'statusCode': 200,
+        'body': 'Vote Success'
     }
     return response
