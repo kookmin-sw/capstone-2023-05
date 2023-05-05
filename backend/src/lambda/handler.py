@@ -73,3 +73,4 @@ def vote_handler(event, context, wsclient):
 @wsclient
 def preparation_start_handler(event, context, wsclient):
     return app.preparation_start_handler(event, context, wsclient)
+    
