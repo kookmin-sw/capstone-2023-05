@@ -1,3 +1,5 @@
+from src.utility.decorator import cors
+import platform
 import json
 import platform
 import time
@@ -12,9 +14,7 @@ from src.utility.context import PostgresContext
 from src.utility.decorator import cors
 from src.utility.websocket import wsclient
 
-
 dynamo_db = boto3.client(**config.dynamo_db_config)
-
 
 @cors
 def hello(event, context):
@@ -24,7 +24,6 @@ def hello(event, context):
         "body": msg
     }
     return response
-
 
 @cors
 def get_platform(event, context):
@@ -56,6 +55,46 @@ def hello_db(event, context):
     return response
 
 
+@cors
+@wsclient
+def create_battle(event, context, wsclient):
+    return app.create_battle(event, context, wsclient)
+
+@cors
+@wsclient
+def get_battles(event, context, wsclient):
+    return app.get_battles(event, context, wsclient)
+
+@cors
+@wsclient
+def get_battle(event, context, wsclient):
+    return app.get_battle(event, context, wsclient)
+
+
+@cors
+@wsclient
+def start_battle(event, context, wsclient):
+    return app.start_battle(event, context, wsclient)
+
+
+@cors
+@wsclient
+def end_battle(event, context, wsclient):
+    return app.end_battle(event, context, wsclient)
+
+
+@cors
+@wsclient
+def start_round(event, context, wsclient):
+    return app.start_round(event, context, wsclient)
+
+
+@cors
+@wsclient
+def end_round(event, context, wsclient):
+    return app.end_round(event, context, wsclient)
+
+
 def connect_handler(event, context):
     return {
         'statusCode': 200,
@@ -74,7 +113,6 @@ def disconnect_handler(event, context):
         ProjectionExpression="battleID,connectionID"
     )['Items']
     battle_id = response[0]['battleID']['S']
-    
     dynamo_db.delete_item(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
         Key={
@@ -82,7 +120,6 @@ def disconnect_handler(event, context):
             'connectionID': {'S': connection_id}
         }
     )
-    
     return {
         'statusCode': 200,
         'body': json.dumps({'message': "Delete connection from DB"})
@@ -114,7 +151,9 @@ def init_join_handler(event, context, wsclient):
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT \"teamId\", name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
+
+            select_query = f"SELECT \"teamId\", \"name\" FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
+
             psql_cursor.execute(select_query)
             rows = psql_cursor.fetchall()
             team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
@@ -138,7 +177,6 @@ def init_join_handler(event, context, wsclient):
 @wsclient
 def send_handler(event, context, wsclient):
     opinion_time = datetime.fromtimestamp(time.time())
-    
     # DynamoDB의 모든 값을 얻어온다.
     paginator = dynamo_db.get_paginator('scan')
     connections = []
@@ -154,6 +192,12 @@ def send_handler(event, context, wsclient):
             my_info = connection
             break
     if my_info is None:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "data": "You should Join a battle first"
+            }
+        )
         return {
             'statusCode': 400,
             'body': json.dumps({'message': "Cannot find your connection information"})
@@ -198,6 +242,7 @@ def send_handler(event, context, wsclient):
                 }
             )
 
+
     response = {
         'statusCode': 200,
         'body': 'Send Success'
@@ -217,6 +262,7 @@ def vote_handler(event, context, wsclient):
         ExpressionAttributeValues={":connection_id": {"S": connection_id}},
         ProjectionExpression="battleID,connectionID,nickname,userID"
     )['Items']
+    print(response)
     battle_id, user_id, nickname = response[0]['battleID']['S'], response[0]['userID']['S'], response[0]['nickname']['S']
     team_id = json.loads(event['body'])['teamId']
 
@@ -254,6 +300,7 @@ def vote_handler(event, context, wsclient):
     # 팀 이름을 찾기 위한 SQL문 실행
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
+
             select_query = f"SELECT name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\' and \"teamId\" = \'{team_id}\'"
             psql_cursor.execute(select_query)
             row = psql_cursor.fetchall()
@@ -325,6 +372,7 @@ def like_handler(event, context, wsclient):
     # Opinion 테이블에서 해당 의견의 좋아요 수를 가져온다.
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
+
             select_query = f"""
                 SELECT "noOfLikes"
                 FROM "Opinion"
