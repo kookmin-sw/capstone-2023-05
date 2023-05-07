@@ -88,6 +88,12 @@ functions:
                   cors:
                       origin: "*"
                       headers: "*"
+  
+    like-handler:
+      handler: src/lambda/handler.like_handler
+      events:
+        - websocket:
+            route: like
 
     connect-handler:
         handler: src/lambda/handler.connect_handler

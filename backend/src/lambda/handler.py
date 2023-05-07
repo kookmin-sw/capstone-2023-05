@@ -4,6 +4,7 @@ import json
 import platform
 import time
 from datetime import datetime
+from psycopg2.errors import ForeignKeyViolation as fk_violation
 import boto3
 
 from src.game import app
@@ -150,7 +151,9 @@ def init_join_handler(event, context, wsclient):
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
+
             select_query = f"SELECT \"teamId\", \"name\" FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
+
             psql_cursor.execute(select_query)
             rows = psql_cursor.fetchall()
             team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
@@ -196,13 +199,37 @@ def send_handler(event, context, wsclient):
             }
         )
         return {
-            'statusCode': 404,
+            'statusCode': 400,
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
-    
-    # 같은 팀에게 자신의 의견을 broadcasting 한다.
+
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    round, num_of_likes = json.loads(event['body'])['round'], 0
     opinion = json.loads(event['body'])['opinion']
+    status = "CANDIDATE"
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
+    try:
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", \"content\", \"time\", status) VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
+                psql_cursor.execute(insert_query)
+                psql_ctx.commit()
+    except fk_violation:
+        wsclient.send(
+                connection_id=my_connection_id,
+                data={
+                    "action": "recvOpinion",
+                    "nickname": "MASTER",
+                    "opinion": "You send malformed data."
+                }
+            )
+        return {
+            'statusCode': 400,
+            'body': 'You tried insert malformed data into DB'
+        }
+
+    # 같은 팀에게 자신의 의견을 broadcasting 한다.
     for connection in connections:
         other_connection = connection['connectionID']['S']
         if connection['battleID']['S'] == battle_id and connection['teamID']['S'] == team_id:
@@ -215,16 +242,6 @@ def send_handler(event, context, wsclient):
                 }
             )
 
-    # PK: userId, battleId, roundNo, time
-    # extra fields: noOfLikes, content, status
-    round, num_of_likes = json.loads(event['body'])['round'], 0
-    status = "CANDIDATE"
-
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO \"Opinion\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, \'{opinion_time}\', {num_of_likes}, \'{opinion}\', \'{status}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
@@ -249,6 +266,25 @@ def vote_handler(event, context, wsclient):
     battle_id, user_id, nickname = response[0]['battleID']['S'], response[0]['userID']['S'], response[0]['nickname']['S']
     team_id = json.loads(event['body'])['teamId']
 
+    # Support 테이블에 팀 선택 기록 저장
+    try:
+        round = json.loads(event['body'])['round']
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+                psql_cursor.execute(insert_query)
+                psql_ctx.commit()
+    except fk_violation:
+        wsclient.send(
+                connection_id=connection_id,
+                data={
+                    "action": "voteResult",
+                    "result": "fail",
+                    "teamId": "None",
+                    "teamName": "You send malformed data."
+                }
+            )
+        
     # DynamoDB에 팀 선택 결과 반영
     dynamo_db.put_item(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
@@ -264,7 +300,8 @@ def vote_handler(event, context, wsclient):
     # 팀 이름을 찾기 위한 SQL문 실행
     with PostgresContext(**config.db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
-            select_query = f"SELECT \"name\" FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\' and \"teamId\" = \'{team_id}\'"
+
+            select_query = f"SELECT name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\' and \"teamId\" = \'{team_id}\'"
             psql_cursor.execute(select_query)
             row = psql_cursor.fetchall()
             team_name = row[0][0]
@@ -279,17 +316,85 @@ def vote_handler(event, context, wsclient):
             "teamName": team_name
         }
     )
-    
-    # Support 테이블에 팀 선택 기록 저장
-    round = json.loads(event['body'])['round']
-    with PostgresContext(**config.db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
-            psql_cursor.execute(insert_query)
-            psql_ctx.commit()
 
     response = {
         'statusCode': 200,
         'body': 'Vote Success'
+    }
+    return response
+
+@wsclient
+def like_handler(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
+
+    # DynamoDB에서 유저 정보 찾기
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="connectionID = :connection_id",
+        ExpressionAttributeValues={":connection_id": {"S": connection_id}},
+        ProjectionExpression="battleID,connectionID,nickname,userID"
+    )['Items']
+    
+    
+    battle_id = response[0]['battleID']['S']
+    user_id = json.loads(event['body'])['userId']
+    order = json.loads(event['body'])['opinionNo']
+    round = json.loads(event['body'])['round']
+    
+    # Opinion 테이블에서 해당 의견의 좋아요 수를 1증가 시킨다.
+    # Race condition이 있기 때문에 쿼리를 동기화 해야한다.
+    try:
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                psql_cursor.execute("BEGIN")
+                psql_cursor.execute(f'SELECT "noOfLikes" FROM "Opinion" WHERE "userId" = \'{user_id}\' AND "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order} FOR UPDATE;')
+                row = psql_cursor.fetchone()      
+                likes = row[0]
+                psql_cursor.execute(f'UPDATE "Opinion" SET "noOfLikes" = {likes + 1} WHERE "userId" = \'{user_id}\' AND "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order}')
+                psql_cursor.execute("COMMIT;")
+    except:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "action": "likeResult",
+                "result": "fail",
+                "opinionNo": order,
+                "noOfLikes": "None"
+            }
+        )
+
+        response = {
+            'statusCode': 400,
+            'body': 'Like Fail'
+        }
+        return response
+    
+    # Opinion 테이블에서 해당 의견의 좋아요 수를 가져온다.
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+
+            select_query = f"""
+                SELECT "noOfLikes"
+                FROM "Opinion"
+                WHERE "userId" = '{user_id}' AND "battleId" = '{battle_id}' AND "roundNo" = {round} AND "order" = {order}
+            """
+            psql_cursor.execute(select_query)
+            row = psql_cursor.fetchall()
+            no_of_likes = row[0][0]
+    
+    # Response 전송
+    wsclient.send(
+        connection_id=connection_id,
+        data={
+            "action": "likeResult",
+            "result": "success",
+            "opinionNo": order,
+            "noOfLikes": no_of_likes
+        }
+    )
+
+    response = {
+        'statusCode': 200,
+        'body': 'Like Success'
     }
     return response
