@@ -253,7 +253,7 @@ def start_battle(event, context, wsclient):
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                query = f"""UPDATE \"DiscussionBattle\" SET \"status\"='RUNNING', \"startTime\"=NOW() WHERE \"battleId\"=\'{battle_id}\' RETURNING *;"""
+                query = f"""UPDATE \"DiscussionBattle\" SET \"status\"='RUNNING', \"startTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' WHERE \"battleId\"=\'{battle_id}\' RETURNING *;"""
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
@@ -302,7 +302,7 @@ def end_battle(event, context, wsclient):
     try:
         with PostgresContext(**db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
-                query = f"""UPDATE \"DiscussionBattle\" SET \"status\"='CLOSED', \"endTime\"=NOW() WHERE \"battleId\"=\'{battle_id}\' RETURNING *;"""
+                query = f"""UPDATE \"DiscussionBattle\" SET \"status\"='CLOSED', \"endTime\"= NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' WHERE \"battleId\"=\'{battle_id}\' RETURNING *;"""
                 psql_cursor.execute(query)
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
@@ -351,7 +351,7 @@ def start_round(event, context, wsclient):
             with psql_ctx.cursor() as psql_cursor:
                 round_query = f"""
                             UPDATE \"Round\"
-                            SET \"startTime\" = NOW()
+                            SET \"startTime\" = NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\'
                             WHERE \"battleId\" = \'{battle_id}\' AND \"roundNo\" = {current_round}
                             RETURNING *;
                         """
@@ -401,7 +401,7 @@ def end_round(event, context, wsclient):
             with psql_ctx.cursor() as psql_cursor:
                 round_query = f"""
                         UPDATE \"Round\"
-                        SET \"endTime\" = NOW() WHERE \"battleId\" = \'{battle_id}\' AND \"roundNo\" = \'{current_round}\'
+                        SET \"endTime\" = NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' WHERE \"battleId\" = \'{battle_id}\' AND \"roundNo\" = \'{current_round}\'
                         RETURNING *;
                     """
                 psql_cursor.execute(round_query)
