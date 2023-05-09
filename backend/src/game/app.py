@@ -273,20 +273,22 @@ def preparation_start_handler(event, context, wsclient):
                 tmp[idx].extend(old_ads[idx][:3])
             
                 drop_orders = [str(ad['order']) for ad in old_ads[idx][3:]]
-                update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
-                psql_ctx.execute_query(update_query)
+                if len(drop_orders):
+                    update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
+                    psql_ctx.execute_query(update_query)
 
-            # candidates 중 9개 랜덤 선정
-            if len(old_ads[idx]) and len(candidates[idx]) >= 9:
-                sampling_number = 9
-            elif len(old_ads[idx]) and len(candidates[idx]) < 9:
+            # candidates 중 랜덤 선정
+            if (not len(old_ads[idx]) and len(candidates[idx]) <= 12) or (len(old_ads[idx]) and len(candidates[idx]) < 9):
                 sampling_number = len(candidates[idx])
+            elif len(old_ads[idx]) and len(candidates[idx]) >= 9:
+                sampling_number = 9
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
             for ad in tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
-        update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
-        psql_ctx.execute_query(update_query)
+        if len(publish_orders):
+            update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
+            psql_ctx.execute_query(update_query)
 
         new_ads = [[], []]
         for idx in range(len(tmp)):
