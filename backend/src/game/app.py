@@ -752,4 +752,13 @@ def end_round(event, context, wsclient):
 
 
 def finish_battle_handler(event, context, wsclinet):
-    pass
+    my_battle_id = json.loads(event['body'])['battleId']
+    select_query = f"SELECT \"maxNoOfRounds\" FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\'"
+    row = psql_ctx.execute_query(select_query)
+    max_rounds = row[0][0]
+    
+    response = {
+        'stautsCode': 200,
+        'body': 'Getting Final Result Success'
+    }
+    return response
