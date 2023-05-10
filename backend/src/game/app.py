@@ -751,7 +751,7 @@ def end_round(event, context, wsclient):
         }
 
 
-def finish_battle_handler(event, context, wsclinet):
+def finish_battle_handler(event, context, wsclient):
     my_battle_id = json.loads(event['body'])['battleId']
     response = dynamo_db.scan(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
@@ -759,7 +759,7 @@ def finish_battle_handler(event, context, wsclinet):
         ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
         ProjectionExpression="connectionID,userID,teamID"
     )['Items']
-    information = [connection['connectionID']['S'] for connection in response]
+    connections = [connection['connectionID']['S'] for connection in response]
 
     select_query = f"SELECT \"maxNoOfRounds\" FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\'"
     row = psql_ctx.execute_query(select_query)
@@ -768,6 +768,15 @@ def finish_battle_handler(event, context, wsclinet):
     select_query = f"SELECT \"vote\", COUNT(\"vote\") FROM \"Support\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {max_rounds} GROUP BY \"vote\""
     rows = psql_ctx.execute_query(select_query)
     return_obj = json.dumps({str(team_id): vote_cnt for team_id, vote_cnt in rows})
+
+    for connection in connections:
+        wsclient.send(
+            connection_id=connection,
+            data={
+                "action": "getFinalResult",
+                "result": return_obj
+            }
+        )
 
     response = {
         'stautsCode': 200,
