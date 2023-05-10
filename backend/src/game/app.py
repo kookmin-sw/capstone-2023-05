@@ -753,14 +753,22 @@ def end_round(event, context, wsclient):
 
 def finish_battle_handler(event, context, wsclinet):
     my_battle_id = json.loads(event['body'])['battleId']
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="battleID = :battle_id",
+        ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
+        ProjectionExpression="connectionID,userID,teamID"
+    )['Items']
+    information = [connection['connectionID']['S'] for connection in response]
+
     select_query = f"SELECT \"maxNoOfRounds\" FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\'"
     row = psql_ctx.execute_query(select_query)
     max_rounds = row[0][0]
 
     select_query = f"SELECT \"vote\", COUNT(\"vote\") FROM \"Support\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {max_rounds} GROUP BY \"vote\""
     rows = psql_ctx.execute_query(select_query)
-    print(rows)
-    
+    return_obj = json.dumps({str(team_id): vote_cnt for team_id, vote_cnt in rows})
+
     response = {
         'stautsCode': 200,
         'body': 'Getting Final Result Success'
