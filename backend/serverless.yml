@@ -78,7 +78,6 @@ functions:
                   cors:
                       origin: "*"
                       headers: "*"
-
     hello-db:
         handler: src/lambda/handler.hello_db
         events:
@@ -94,7 +93,6 @@ functions:
       events:
         - websocket:
             route: like
-
     connect-handler:
         handler: src/lambda/handler.connect_handler
         events:
@@ -155,6 +153,12 @@ functions:
         events:
           - websocket:
               route: vote
+    preparation-start-handler:
+        handler: src/lambda/handler.preparation_start_handler
+        events:
+            - websocket:
+                  route: preparationStart
+        timeout: 100
 
 custom:
     customDomain:
