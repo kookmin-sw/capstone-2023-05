@@ -749,3 +749,7 @@ def end_round(event, context, wsclient):
                 "Error": str(e)
             })
         }
+
+
+def finish_battle_handler(event, context, wsclinet):
+    pass
