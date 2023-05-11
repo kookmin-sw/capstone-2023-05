@@ -190,3 +190,8 @@ def like_handler(event, context, wsclient):
         'body': 'Like Success'
     }
     return response
+
+
+@wsclient
+def finish_battle_handler(event, context, wsclient):
+    return app.finish_battle_handler(event, context, wsclient)

@@ -97,12 +97,12 @@ functions:
         handler: src/lambda/handler.connect_handler
         events:
             - websocket:
-                  route: $connect
+                route: $connect
     disconnect-handler:
         handler: src/lambda/handler.disconnect_handler
         events:
             - websocket:
-                  route: $disconnect
+                route: $disconnect
     init-join-handler:
         handler: src/lambda/handler.init_join_handler
         events:
@@ -112,42 +112,42 @@ functions:
         handler: src/lambda/handler.send_handler
         events:
             - websocket:
-                  route: sendOpinion
+                route: sendOpinion
     get-battles-handler:
         handler: src/lambda/handler.get_battles
         events:
             - websocket:
-                  route: getBattles
+                route: getBattles
     create-battles-handler:
         handler: src/lambda/handler.create_battle
         events:
             - websocket:
-                  route: createBattle
+                route: createBattle
     get-battle-handler:
         handler: src/lambda/handler.get_battle
         events:
             - websocket:
-                  route: getBattle
+                route: getBattle
     start-battle-handler:
         handler: src/lambda/handler.start_battle
         events:
             - websocket:
-                  route: startBattle
+                route: startBattle
     end-battle-handler:
         handler: src/lambda/handler.end_battle
         events:
             - websocket:
-                  route: endBattle
+                route: endBattle
     start-round-handler:
         handler: src/lambda/handler.start_round
         events:
             - websocket:
-                  route: startRound
+                route: startRound
     end-round-handler:
         handler: src/lambda/handler.end_round
         events:
             - websocket:
-                  route: endRound
+                route: endRound
     vote-handler:
         handler: src/lambda/handler.vote_handler
         events:
@@ -157,8 +157,13 @@ functions:
         handler: src/lambda/handler.preparation_start_handler
         events:
             - websocket:
-                  route: preparationStart
+                route: preparationStart
         timeout: 100
+    finish-battle-handler:
+        handler: src/lambda/handler.finish_battle_handler
+        events:
+            - websocket:
+                route: finishBattle
 
 custom:
     customDomain:
