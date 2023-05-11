@@ -767,7 +767,7 @@ def finish_battle_handler(event, context, wsclient):
 
     select_query = f"SELECT \"vote\", COUNT(\"vote\") FROM \"Support\" WHERE \"battleId\" = \'{my_battle_id}\' and \"roundNo\" = {max_rounds} GROUP BY \"vote\""
     rows = psql_ctx.execute_query(select_query)
-    return_obj = json.dumps({str(team_id): vote_cnt for team_id, vote_cnt in rows})
+    return_obj = {str(team_id): vote_cnt for team_id, vote_cnt in rows}
 
     for connection in connections:
         wsclient.send(
