@@ -1,4 +1,5 @@
 import json
+import os
 import boto3
 
 from src.auth import kakao, google, cognito
@@ -74,7 +75,7 @@ def kakao_login(event, context):
 
     return {
         'statusCode': 302,
-        'headers': {'Location': 'http://localhost:3000/dev/login/process?email=%s&newbie=%d&token=%s' % (email, is_newbie, access_token)}
+        'headers': {'Location': f'http://localhost:3000/{os.getenv("PRIVATE_STAGE")}/login/process?email={email}&newbie={is_newbie}&token={access_token}'}
     }
 
 
@@ -198,7 +199,7 @@ def logout(event, context):
     # Redirect to login page
     return {
         'statusCode': 302,
-        'headers': {'Location': 'http://localhost:3000/dev/login'},
+        'headers': {'Location': f'http://localhost:3000/{os.getenv("PRIVATE_STAGE")}/login'},
     }
 
 
