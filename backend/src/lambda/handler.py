@@ -1,8 +1,9 @@
 import json
-import os
-import auth.kakao as kakao
-import auth.google as google
-import auth.cognito as cognito
+import boto3
+
+from src.auth import kakao, google, cognito
+
+from src.utility.decorator import cors
 
 
 # Getting fragment information from browser!
@@ -10,45 +11,23 @@ import auth.cognito as cognito
 # Getting fragment, checking user is new user or not
 # And redirect to setting nickname page or lobby page.
 
+@cors
 def login(event, context):
     """
     Showing login page.\n
     :return: Response for getting login html
     """
-
-    login_html = """
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <title>Naruhodoo Login</title>
-            </head>
-            <body>
-                <h1>Let's start with your account!</h1>
-                <form>
-                    <input type="button" value="Log-in with Kakao" onclick="loginKakao()">
-                    <input type="button" value="Log-in with Google" onclick="loginGoogle()">
-                </form>
-
-                <script>
-                    // redirect to a new page
-                    function loginKakao() {
-                        window.location.href = "https://kauth.kakao.com/authorize?response_type=code&client_id=%s&redirect_uri=%s";
-                    }
-                    function loginGoogle() {
-                        window.location.href = "https://naruhodoo-test.auth.ap-northeast-2.amazoncognito.com/login?response_type=token&client_id=%s&redirect_uri=%s";
-                    }
-                </script>
-            </body>
-        </html>
-        """ % (os.getenv("KAKAO_REST_API_KEY"), "http://localhost:3000/dev/login/kakao", os.getenv("AWS_COGNITO_CLIENT_ID"), "http://localhost:3000/dev/login/gooprocess")
-    
+    s3 = boto3.client('s3')
+    response = s3.get_object(Bucket='jwlee-test-bucket', Key='login.html')
+    content = response['Body'].read().decode('utf-8')
     return {
-            "statusCode": 200,
-            "body": login_html,
-            "headers": {"Content-Type": "text/html"}
-        }
+        'statusCode': 200,
+        'body': content,
+        'headers': {'Content-Type': 'text/html'}
+    }
 
 
+@cors
 def kakao_process(event, context):
     process_html ="""
     <!DOCTYPE html>
@@ -122,6 +101,7 @@ def kakao_process(event, context):
     }
 
 
+@cors
 def google_process(event, context):
     process_html ="""
     <!DOCTYPE html>
@@ -147,6 +127,7 @@ def google_process(event, context):
     }
 
 
+@cors
 def nickname(event, context):
     nickname_html = """
     <!DOCTYPE html>
@@ -239,6 +220,7 @@ def nickname(event, context):
     }
 
 
+@cors
 def kakao_login(event, context):
     """
     Trying to login through Kakao account\n
@@ -260,6 +242,7 @@ def kakao_login(event, context):
     }
 
 
+@cors
 def google_login(event, context):
     # How to get user's google account? => Get token from code and decode the token    
     return {
@@ -333,6 +316,7 @@ def google_login(event, context):
     # }
     
 
+@cors
 def cognito_login(event, context):
     """
     Trying to get access token from aws cognito.\n
@@ -365,6 +349,7 @@ def cognito_login(event, context):
     }
 
 
+@cors
 def logout(event, context):
     """
     Trying to sign out via cognito.\n
@@ -381,6 +366,7 @@ def logout(event, context):
     }
 
 
+@cors
 def delete_account(event, context):
     """
     Trying to delete user in cognito user pool.\n
