@@ -6,6 +6,7 @@ from src.auth import kakao, google, cognito
 from src.utility.decorator import cors
 
 
+s3 = boto3.client('s3')
 # Getting fragment information from browser!
 # So, let's make a empty html page for redirecting here
 # Getting fragment, checking user is new user or not
@@ -13,11 +14,6 @@ from src.utility.decorator import cors
 
 @cors
 def login(event, context):
-    """
-    Showing login page.\n
-    :return: Response for getting login html
-    """
-    s3 = boto3.client('s3')
     response = s3.get_object(Bucket='jwlee-test-bucket', Key='login.html')
     content = response['Body'].read().decode('utf-8')
     return {
@@ -29,194 +25,34 @@ def login(event, context):
 
 @cors
 def kakao_process(event, context):
-    process_html ="""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Redirecting...</title>
-        <script src="https://sdk.amazonaws.com/js/aws-sdk-2.815.0.min.js"></script>
-        <script>
-            // Retrieve query parameters from URL
-            const queryString = window.location.search;
-            const urlParams = new URLSearchParams(queryString);
-            const email = urlParams.get('email');
-            const newbie = urlParams.get('newbie');
-            const cognitoAccessToken = urlParams.get('token');
-
-            // Redirect to the specified URL
-            if (newbie == 1) {
-                window.location.href = "http://localhost:3000/dev/profile/nickname?email=" + email + "&token=" + cognitoAccessToken;
-            }
-            else {
-                 // Set the region and credentials for your AWS account
-                AWS.config.update({
-                    region: 'ap-northeast-2',
-                    credentials: new AWS.CognitoIdentityCredentials({
-                        IdentityPoolId: 'ap-northeast-2:e40d2c07-62f3-4247-bc5c-1ac67f77db12'
-                    })
-                });
-
-                // Create an instance of the CognitoIdentityServiceProvider class
-                var cognitoIdP = new AWS.CognitoIdentityServiceProvider();
-
-                // Call the listUsers method to retrieve a list of users
-                function getNicknameByEmail(email, callback) {
-                    // Set the parameters for the listUsers method
-                    var params = {
-                        UserPoolId: 'ap-northeast-2_pWsRKg63G',
-                        AttributesToGet: ['email', 'nickname'],
-                        Limit: 50
-                    };
-
-                    cognitoIdP.listUsers(params, function(err, data) {
-                        if (err) {
-                            console.log(err, err.stack);
-                        } else {
-                            const userList = data.Users;
-                            var attrsArray = Array();
-                            for (var i = 0; i < userList.length; i++) {
-                                const user = userList[i];
-                                if (user.Attributes.find(attr => attr.Name === 'email' && attr.Value === email)) {
-                                    const nickname = user.Attributes.find(attr => attr.Name === 'nickname');
-                                    callback(nickname.Value);
-                                }
-                            }
-                        }
-                    });
-                }
-
-                getNicknameByEmail(email, function(nickname) {
-                    console.log(nickname);
-                    window.location.href = "http://localhost:3000/dev/login/cognito?username=" + email + "&nickname=" + nickname + "&provider=Kakao";
-                });
-            }
-        </script>
-    </head>
-    </html>
-    """
+    response = s3.get_object(Bucket='jwlee-test-bucket/kakao_process', Key='kakao_process.html')
+    content = response['Body'].read().decode('utf-8')
     return {
-        "statusCode": 200,
-        "body": process_html,
-        "headers": {"Content-Type": "text/html"}
+        'statusCode': 200,
+        'body': content,
+        'headers': {'Content-Type': 'text/html'}
     }
 
 
 @cors
 def google_process(event, context):
-    process_html ="""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Redirecting...</title>
-        <script src="https://sdk.amazonaws.com/js/aws-sdk-2.815.0.min.js"></script>
-        <script>
-            // Retrieve query parameters from URL
-            const cognitoAccessToken = window.location.hash.substring(1);
-            // console.log(cognitoAccessToken);
-
-            /* Now check nickname attribute.
-               If nickname attribute doesn't exist, he is newbie! */
-        </script>
-    </head>
-    </html>
-    """
+    response = s3.get_object(Bucket='jwlee-test-bucket/google_process', Key='google_process.html')
+    content = response['Body'].read().decode('utf-8')
     return {
-        "statusCode": 200,
-        "body": process_html,
-        "headers": {"Content-Type": "text/html"}
+        'statusCode': 200,
+        'body': content,
+        'headers': {'Content-Type': 'text/html'}
     }
 
 
 @cors
 def nickname(event, context):
-    nickname_html = """
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <title>Enter your nickname</title>
-            <script src="https://sdk.amazonaws.com/js/aws-sdk-2.815.0.min.js"></script>
-        </head>
-        <body>
-            <p>Enter your nickname below</p>
-            <form>
-                <label for="nickname">New nickname:</label>
-                <input type="text" id="nickname" name="nickname"><br><br>
-                <input type="button" value="Continue" onclick="submitNickname()">
-            </form>
-
-            <script>
-                const queryString = window.location.search;
-                const urlParams = new URLSearchParams(queryString);
-                const email = urlParams.get('email');
-                const cognitoAccessToken = urlParams.get('token');
-
-                // Set the region and credentials for your AWS account
-                AWS.config.update({
-                    region: 'ap-northeast-2',
-                    credentials: new AWS.CognitoIdentityCredentials({
-                        IdentityPoolId: 'ap-northeast-2:e40d2c07-62f3-4247-bc5c-1ac67f77db12'
-                    })
-                });
-
-                // Create an instance of the CognitoIdentityServiceProvider class
-                var cognitoIdP = new AWS.CognitoIdentityServiceProvider();
-
-                // Call the listUsers method to retrieve a list of users
-                function getNameByEmail(email, callback) {
-                    // Set the parameters for the listUsers method
-                    var params = {
-                        UserPoolId: 'ap-northeast-2_pWsRKg63G',
-                        AttributesToGet: ['email'],
-                        Limit: 50
-                    };
-                    
-                    cognitoIdP.listUsers(params, function(err, data) {
-                        if (err) {
-                            console.log(err, err.stack);
-                        } else {
-                            const userList = data.Users;
-                            for (var i = 0; i < userList.length; i++) {
-                                if ((userList[i].Username == email) || (userList[i].Attributes.find(attr => attr.Name === 'email' && attr.Value === email))) { callback(userList[i].Username); }
-                            }
-                        }
-                    });
-                }
-                
-                function submitNickname() {
-                    // get the nickname from the input field
-                    const userNickname = document.getElementById("nickname").value;
-
-                    getNameByEmail(email, function(name) {
-                        var params = {
-                            AccessToken: cognitoAccessToken,
-                            UserAttributes: [
-                                {
-                                    Name: 'nickname',
-                                    Value: userNickname
-                                },
-                                {
-                                    Name: 'email',
-                                    Value: email
-                                }
-                            ]
-                        };
-                        cognitoIdP.updateUserAttributes(params, function(err, data) {
-                            if (err) {
-                                console.log(err);
-                            }
-                        });
-                    });
-
-                    window.location.href = "http://localhost:3000/dev/login/cognito?username=" + email + "&nickname=" + userNickname + "&provider=Kakao";
-                }
-            </script>
-        </body>
-    </html>
-    """
+    response = s3.get_object(Bucket='jwlee-test-bucket/nickname', Key='nickname.html')
+    content = response['Body'].read().decode('utf-8')
     return {
-        "statusCode": 200,
-        "body": nickname_html,
-        "headers": {"Content-Type": "text/html"}
+        'statusCode': 200,
+        'body': content,
+        'headers': {'Content-Type': 'text/html'}
     }
 
 

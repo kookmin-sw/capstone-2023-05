@@ -1,87 +1,235 @@
 service: serverless-naruhodoo
 
-frameworkVersion: '3'
+frameworkVersion: "3"
 
 provider:
   name: aws
   runtime: python3.9
+  architecture: x86_64
   region: ap-northeast-2
   profile: ${env:AWS_PROFILE}
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, env:PRIVATE_STAGE}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/naruhodoo/aws/security_group}
+    subnetIds:
+      - ${ssm:/naruhodoo/aws/subnet1}
+      - ${ssm:/naruhodoo/aws/subnet4}
+  environment:
+    POSTGRES_HOST: ${ssm:/naruhodoo/${self:provider.stage}/postgres/host, env:POSTGRES_HOST}
+    POSTGRES_PORT: ${ssm:/naruhodoo/${self:provider.stage}/postgres/port, env:POSTGRES_PORT}
+    POSTGRES_USER: ${ssm:/naruhodoo/${self:provider.stage}/postgres/user, env:POSTGRES_USER}
+    POSTGRES_PASSWORD: ${ssm:/naruhodoo/${self:provider.stage}/postgres/password, env:POSTGRES_PASSWORD}
+    POSTGRES_DB: ${ssm:/naruhodoo/${self:provider.stage}/postgres/db, env:POSTGRES_DB}
+    REDIS_HOST: ${ssm:/naruhodoo/${self:provider.stage}/redis/host, env:REDIS_HOST}
+    REDIS_PORT: ${ssm:/naruhodoo/${self:provider.stage}/redis/port, env:REDIS_PORT}
+    REDIS_DB: ${ssm:/naruhodoo/${self:provider.stage}/redis/db, env:REDIS_DB}
+    DYNAMODB_WS_CONNECTION_TABLE: ${ssm:/naruhodoo/${self:provider.stage}/dynamodb/ws_connection_table, env:DYNAMODB_WS_CONNECTION_TABLE}
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - 'dynamodb:PutItem'
+            - 'dynamodb:DeleteItem'
+            - 'dynamodb:Scan'
+            - 'dynamodb:GetItem'
+          Resource:   #TODO: 사용하고 있는 테이블만 허용하도록 제한해야 함
+            - 'arn:aws:dynamodb:ap-northeast-2:401482569934:table/*'
+        
+        - Effect: 'Allow'
+          Action:
+            - 'execute-api:ManageConnections'
+          Resource:
+            - 'arn:aws:execute-api:ap-northeast-2:401482569934:*/*/*/*'
+
+package:
+    patterns:
+        - "!volumes"
+        - "!node_modules"
 
 functions:
-  login:
-    handler: functions/handler.login
-    events:
-      - http:
-          path: /login
-          method: get
+    hello:
+        handler: src/lambda/handler.create
+        events:
+            - http:
+                  path: /hello
+                  method: get
+                  cors:
+                      origin: "*"
+                      headers: "*"
 
-  kakao_login:
-    handler: functions/handler.kakao_login
-    events:
-      - http:
-          path: /login/kakao
-          method: get
+    platform:
+        handler: src/lambda/handler.get_platform
+        events:
+            - http:
+                  path: /platform
+                  method: get
+                  cors:
+                      origin: "*"
+                      headers: "*"
 
-  google_login:
-    handler: functions/handler.google_login
-    events:
-      - http:
-          path: login/google
-          method: get
+    hello-redis:
+        handler: src/lambda/handler.hello_redis
+        events:
+            - http:
+                  path: /hello-redis
+                  method: get
+                  cors:
+                      origin: "*"
+                      headers: "*"
+    hello-db:
+        handler: src/lambda/handler.hello_db
+        events:
+            - http:
+                  path: /hello-db
+                  method: get
+                  cors:
+                      origin: "*"
+                      headers: "*"
+    login:
+        handler: src/lambda/handler.login
+        events:
+            - http:
+                path: /login
+                method: get
+    kakao_login:
+        handler: src/lambda/handler.kakao_login
+        events:
+            - http:
+                path: /login/kakao
+                method: get
+    google_login:
+        handler: src/lambda/handler.google_login
+        events:
+            - http:
+                path: login/google
+                method: get
+    cognito_login:
+        handler: src/lambda/handler.cognito_login
+        events:
+            - http:
+                path: /login/cognito
+                method: get
+    logout:
+        handler: src/lambda/handler.logout
+        events:
+            - http:
+                path: /logout
+                method: get
+    delete_account:
+        handler: src/lambda//handler.delete_account
+        events:
+            - http:
+                path: /profile
+                method: delete
+    kakao_process:
+        handler: src/lambda/handler.kakao_process
+        events:
+            - http:
+                path: /login/kaprocess
+                method: get
+    google_process:
+        handler: src/lambda/handler.google_process
+        events:
+            - http:
+                path: /login/gooprocess
+                method: get
+    get_nickname:
+        handler: src/lambda/handler.nickname
+        events:
+            - http:
+                path: /profile/nickname
+                method: get
 
-  cognito_login:
-    handler: functions/handler.cognito_login
-    events:
-      - http:
-          path: /login/cognito
-          method: get
-
-  logout:
-    handler: functions/handler.logout
-    events:
-      - http:
-          path: /logout
-          method: get
-
-  delete_account:
-    handler: functions/handler.delete_account
-    events:
-      - http:
-          path: /profile
-          method: delete
-
-  kakao_process:
-    handler: functions/handler.kakao_process
-    events:
-      - http:
-          path: /login/kaprocess
-          method: get
-
-  google_process:
-    handler: functions/handler.google_process
-    events:
-      - http:
-          path: /login/gooprocess
-          method: get
-
-  get_nickname:
-    handler: functions/handler.nickname
-    events:
-      - http:
-          path: /profile/nickname
-          method: get
+    like-handler:
+      handler: src/lambda/handler.like_handler
+      events:
+        - websocket:
+            route: like
+    connect-handler:
+        handler: src/lambda/handler.connect_handler
+        events:
+            - websocket:
+                  route: $connect
+    disconnect-handler:
+        handler: src/lambda/handler.disconnect_handler
+        events:
+            - websocket:
+                  route: $disconnect
+    init-join-handler:
+        handler: src/lambda/handler.init_join_handler
+        events:
+            - websocket:
+                  route: initJoin
+    send-handler:
+        handler: src/lambda/handler.send_handler
+        events:
+            - websocket:
+                  route: sendOpinion
+    get-battles-handler:
+        handler: src/lambda/handler.get_battles
+        events:
+            - websocket:
+                  route: getBattles
+    create-battles-handler:
+        handler: src/lambda/handler.create_battle
+        events:
+            - websocket:
+                  route: createBattle
+    get-battle-handler:
+        handler: src/lambda/handler.get_battle
+        events:
+            - websocket:
+                  route: getBattle
+    start-battle-handler:
+        handler: src/lambda/handler.start_battle
+        events:
+            - websocket:
+                  route: startBattle
+    end-battle-handler:
+        handler: src/lambda/handler.end_battle
+        events:
+            - websocket:
+                  route: endBattle
+    start-round-handler:
+        handler: src/lambda/handler.start_round
+        events:
+            - websocket:
+                  route: startRound
+    end-round-handler:
+        handler: src/lambda/handler.end_round
+        events:
+            - websocket:
+                  route: endRound
+    vote-handler:
+        handler: src/lambda/handler.vote_handler
+        events:
+          - websocket:
+              route: vote
+    preparation-start-handler:
+        handler: src/lambda/handler.preparation_start_handler
+        events:
+            - websocket:
+                  route: preparationStart
+        timeout: 100
+    
+custom:
+    customDomain:
+        domainName: ${env:CUSTOM_DOMAIN}
+        stage: ${self:provider.stage}
+        basePath: ${self:provider.stage}
+        certificateName: ${env:CERTIFICATE_NAME}
+        createRoute53Record: true
+    pythonRequirements:
+        dockerizePip: true # Use docker to install dependencies for non-linux environments
+        slim: true # Slim down the size of the package by removing unneeded files
+        cacheLocation: ".pip_cache"
+        noDeploy:
+            - pytest
+            - boto3
 
 plugins:
-  - serverless-python-requirements
-  - serverless-domain-manager
-  - serverless-offline
-
-custom:
-  customDomain:
-    domainName: ${env:CUSTOM_DOMAIN}
-    stage: ${self:provider.stage}
-    basePath: ${self:provider.stage}
-    certificateName: ${env:CERTIFICATE_NAME}
-    createRoute53Record: true
+    - serverless-python-requirements
+    - serverless-domain-manager
+    - serverless-offline
