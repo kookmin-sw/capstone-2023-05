@@ -24,12 +24,14 @@ services:
       - 5432:5432
     volumes:
       - ./volumes/postgres-data:/var/lib/postgresql/data
+      - ./setup/model.sql:/docker-entrypoint-initdb.d/model.sql
     networks:
         - backend
   
   dynamodb:
     image: amazon/dynamodb-local:latest
     container_name: dynamodb
+    user: root
     restart: always
     ports:
       - 8000:8000
