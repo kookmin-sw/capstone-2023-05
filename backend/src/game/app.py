@@ -137,7 +137,7 @@ def send_handler(event, context, wsclient):
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
 
-    insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"time\", status) VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', \'{opinion_time}\', \'{status}\')'
+    insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW(), NULL, NULL, \'{status}\')'
     psql_ctx.execute_query(insert_query)
     
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
@@ -213,6 +213,16 @@ def vote_handler(event, context, wsclient):
     }
     return response
 
+def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
+    best_opinions = [[] for _ in range(len(candidate_dropped_opinions))]
+
+    # for team_i in range(len(best_opinions)):
+    #     best_opinions[team_i].sort(key=lambda x: x[''] / x[''])
+    
+    print(candidate_dropped_opinions)
+    
+    return best_opinions
+
 
 def preparation_start_handler(event, context, wsclient):
     # 토론의 Host와 라운드의 갱신 주기, 갱신 횟수 얻기
@@ -242,7 +252,7 @@ def preparation_start_handler(event, context, wsclient):
         
         # 현재 라운드의 모든 의견을 가져온다.
         my_battle_id, curr_round = json.loads(event['body'])['battleId'], json.loads(event['body'])['round']
-        select_query = f"""SELECT ("Opinion"."userId","Opinion"."battleId","Opinion"."roundNo","Opinion"."order","Opinion"."noOfLikes","Opinion"."content","Opinion"."status","Support"."vote") FROM "Opinion", "Support" 
+        select_query = f"""SELECT ("Opinion"."userId","Opinion"."battleId","Opinion"."roundNo","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote") FROM "Opinion", "Support" 
         WHERE "Opinion"."userId" = "Support"."userId" and "Opinion"."battleId" = '{my_battle_id}' and "Support"."battleId" = '{my_battle_id}' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round} and status != 'REPORTED'"""
         rows = psql_ctx.execute_query(select_query)
 
@@ -251,7 +261,7 @@ def preparation_start_handler(event, context, wsclient):
         for row in rows:
             f = csv.reader([row[0]], delimiter=',', quotechar='\"')
             row = next(f); row[0] = row[0][1:]; row[2] = int(row[2]); row[3] = int(row[3]); row[4] = int(row[4]); row[-1] = int(row[-1][:-1])
-            return_info = {"userId": row[0], "order": row[3], "likes": row[4], "content": row[5]}
+            return_info = {"userId": row[0], "order": row[3], "likes": row[4], "content": row[5], "publishTime": row[6], "dropTime": row[7]}
             if row[-1] == team_ids[0]:
                 if row[-2] != "CANDIDATE":
                     best3_candidates[0].append(row[:5])
@@ -276,7 +286,7 @@ def preparation_start_handler(event, context, wsclient):
             
                 drop_orders = [str(ad['order']) for ad in old_ads[idx][3:]]
                 if len(drop_orders):
-                    update_query = f'UPDATE \"Opinion\" SET status = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
+                    update_query = f'UPDATE \"Opinion\" SET \"dropTime\"=NOW(), \"status\" = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
                     psql_ctx.execute_query(update_query)
 
             # candidates 중 랜덤 선정
@@ -289,7 +299,7 @@ def preparation_start_handler(event, context, wsclient):
                 publish_orders.append(str(ad['order']))
 
         if len(publish_orders):
-            update_query = f'UPDATE \"Opinion\" SET status = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
+            update_query = f'UPDATE \"Opinion\" SET \"publishTime\"=NOW(), \"status\" = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
             psql_ctx.execute_query(update_query)
 
         new_ads = [[], []]
@@ -300,6 +310,9 @@ def preparation_start_handler(event, context, wsclient):
                 if 'likes_per_refresh_time' in new_ad:
                     del new_ad['likes_per_refresh_time']
                 new_ads[idx].append(new_ad)
+        
+        # 베스트 의견 선정 및 계산
+        best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=candidates)
 
         for info in information:
             if info['userID'] == owner_id:    # Host는 양 팀의 Ads를 모두 확인할 수 있어야 한다.
