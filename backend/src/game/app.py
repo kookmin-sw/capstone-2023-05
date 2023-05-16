@@ -214,12 +214,38 @@ def vote_handler(event, context, wsclient):
     return response
 
 def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
-    best_opinions = [[] for _ in range(len(candidate_dropped_opinions))]
+    # 비교 함수
+    def helper(opinion):
+        status = opinion['status']
+        likes = opinion['likes']
 
-    # for team_i in range(len(best_opinions)):
-    #     best_opinions[team_i].sort(key=lambda x: x[''] / x[''])
-    
-    print(candidate_dropped_opinions)
+        if status == 'CANDIDATE':
+            return -1
+
+        publish_time = datetime.strptime(opinion['publishTime'], '%Y-%m-%d %H:%M:%S.%f') 
+        drop_time = datetime.strptime(opinion['dropTime'], '%Y-%m-%d %H:%M:%S.%f') if opinion['dropTime'] else None
+
+        time_alive = 0
+        # PUBLISHED의 기준
+        if status == "PUBLISHED":
+            now = datetime.now()
+            time_alive = (now - publish_time).total_seconds()
+            
+        
+        # DROPPED의 기준: 
+        elif status == "DROPPED" and drop_time is not None:
+            time_alive = (drop_time - publish_time).total_seconds()
+        
+        compare_value = likes / time_alive
+        return compare_value
+
+    best_opinions = [[] for _ in range(len(candidate_dropped_opinions))]
+    best_opinions = candidate_dropped_opinions
+
+    # 팀별로 Sort() & Limit N
+    for team_i in range(len(best_opinions)):   
+        best_opinions[team_i].sort(key=lambda x: helper(x), reverse=True)
+        best_opinions[team_i] = best_opinions[team_i][:n_best_opinions]
     
     return best_opinions
 
@@ -257,17 +283,19 @@ def preparation_start_handler(event, context, wsclient):
         rows = psql_ctx.execute_query(select_query)
 
         # 팀별로 의견을 나눈다.
-        best3_candidates, candidates = [[], []], [[], []]
+        best3_candidates, candidates, all_candidates_dropped = [[], []], [[], []], [[], []]
         for row in rows:
             f = csv.reader([row[0]], delimiter=',', quotechar='\"')
             row = next(f); row[0] = row[0][1:]; row[2] = int(row[2]); row[3] = int(row[3]); row[4] = int(row[4]); row[-1] = int(row[-1][:-1])
-            return_info = {"userId": row[0], "order": row[3], "likes": row[4], "content": row[5], "publishTime": row[6], "dropTime": row[7]}
+            return_info = {"userId": row[0], "order": row[3], "likes": row[4], "content": row[5], "publishTime": row[6], "dropTime": row[7], "status": row[8]}
             if row[-1] == team_ids[0]:
+                all_candidates_dropped[0].append(return_info)
                 if row[-2] != "CANDIDATE":
                     best3_candidates[0].append(row[:5])
                 else:
                     candidates[0].append(return_info)
             else:
+                all_candidates_dropped[1].append(return_info)
                 if row[-2] != "CANDIDATE":
                     best3_candidates[1].append(row[:5])
                 else:
@@ -312,7 +340,7 @@ def preparation_start_handler(event, context, wsclient):
                 new_ads[idx].append(new_ad)
         
         # 베스트 의견 선정 및 계산
-        best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=candidates)
+        best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=all_candidates_dropped)
 
         for info in information:
             if info['userID'] == owner_id:    # Host는 양 팀의 Ads를 모두 확인할 수 있어야 한다.
@@ -321,7 +349,8 @@ def preparation_start_handler(event, context, wsclient):
                     data={
                         "action": "recvNewAds",
                         "result": "success",
-                        "newAds": new_ads
+                        "bestOpinions": best_opinions,
+                        "newAds": new_ads,
                     }
                 )
             else:    # 참여자는 자신의 팀의 Ads만 받아야 한다.
@@ -330,6 +359,7 @@ def preparation_start_handler(event, context, wsclient):
                     data={
                         "action": "recvNewAds",
                         "result": "success",
+                        "bestOpinions": best_opinions[0] if int(info['teamID']) == team_ids[0] else best_opinions[1],
                         "newAds": new_ads[0] if int(info['teamID']) == team_ids[0] else new_ads[1]
                     }
                 )
