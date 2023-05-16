@@ -339,12 +339,23 @@ def preparation_start_handler(event, context, wsclient):
             for ad in tmp[idx]:
                 new_ad = deepcopy(ad)
                 del new_ad['order']
+                del new_ad['publishTime']
+                del new_ad['dropTime']
+                del new_ad['status']
                 if 'likes_per_refresh_time' in new_ad:
                     del new_ad['likes_per_refresh_time']
                 new_ads[idx].append(new_ad)
         
         # 베스트 의견 선정 및 계산
         best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=all_candidates_dropped)
+
+        # 불필요 정보 삭제
+        for team_id in range(len(new_ads)):
+            for opinion in best_opinions[team_id]:
+                del opinion['order']
+                del opinion['publishTime']
+                del opinion['dropTime']
+                del opinion['status']
 
         for info in information:
             if info['userID'] == owner_id:    # Host는 양 팀의 Ads를 모두 확인할 수 있어야 한다.
