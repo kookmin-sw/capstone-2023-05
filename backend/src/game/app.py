@@ -236,17 +236,21 @@ def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
         elif status == "DROPPED" and drop_time is not None:
             time_alive = (drop_time - publish_time).total_seconds()
         
+        # Criteria for comparing
         compare_value = likes / time_alive
         return compare_value
 
     best_opinions = [[] for _ in range(len(candidate_dropped_opinions))]
     best_opinions = candidate_dropped_opinions
 
-    # 팀별로 Sort() & Limit N
+    # 팀별로 Sort() & Filter & Limit N
     for team_i in range(len(best_opinions)):   
         best_opinions[team_i].sort(key=lambda x: helper(x), reverse=True)
-        best_opinions[team_i] = best_opinions[team_i][:n_best_opinions]
-    
+        best_opinions[team_i] = list(filter(lambda x: x['status'] != 'CANDIDATE', best_opinions[team_i]))
+
+        # Limit N
+        if len(best_opinions[team_i]) > n_best_opinions:
+            best_opinions[team_i] = best_opinions[team_i][:n_best_opinions]
     return best_opinions
 
 
