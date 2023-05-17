@@ -309,25 +309,21 @@ def preparation_start_handler(event, context, wsclient):
         tmp = [[], []]
         publish_orders = []
         for idx in range(len(old_ads)):
-            # TODO: 의견의 수가 부족하면 살아남는 의견의 수가 3개가 아닐 수도 있다!!
-            
-            # refresh 횟수가 3번 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
-            # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
-            if len(old_ads[idx]) and refresh >= 3:
-                if len(old_ads[idx]) >= 3:
+            # 처음에 요청했다면, Ads는 존재하지 않기 때문
+            if len(old_ads[idx]):
+                # refresh 횟수가 3번 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
+                # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
+                drop_orders = []
+                if refresh >= 2:
+                    drop_orders.extend([str(ad['order']) for ad in old_ads[idx][:3]])
                     old_ads[idx] = old_ads[idx][3:]
-                else:
-                    old_ads[idx].clear()
 
-            # old_ads 의견들 중 상위 3개 선정
-            if len(old_ads[idx]):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
-
                 old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
-                tmp[idx].extend(old_ads[idx][:3])
+                tmp[idx].extend(old_ads[idx][:3])    # old_ads 의견들 중 상위 3개 선정
             
-                drop_orders = [str(ad['order']) for ad in old_ads[idx][3:]]
+                drop_orders.extend([str(ad['order']) for ad in old_ads[idx][3:]])
                 if len(drop_orders):
                     update_query = f'UPDATE \"Opinion\" SET \"dropTime\"=NOW(), \"status\" = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
                     psql_ctx.execute_query(update_query)
