@@ -319,6 +319,8 @@ def preparation_start_handler(event, context, wsclient):
                     old_ads[idx] = old_ads[idx][3:]
 
                 for ad in old_ads[idx]:
+                    # TODO: 이 식도 바뀌어야 할텐데??
+                    # 승호 형이 쓰고 있는 "publishTime"과 "droppedTime"을 잘 활용해보자.
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
                 old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])    # old_ads 의견들 중 상위 3개 선정
