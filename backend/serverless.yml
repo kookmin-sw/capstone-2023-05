@@ -1,6 +1,6 @@
 service: serverless-naruhodoo
 
-frameworkVersion: '3'
+frameworkVersion: "3"
 
 provider:
   name: aws
@@ -28,20 +28,20 @@ provider:
   iam:
     role:
       statements:
-        - Effect: 'Allow'
+        - Effect: "Allow"
           Action:
-            - 'dynamodb:PutItem'
-            - 'dynamodb:DeleteItem'
-            - 'dynamodb:Scan'
-            - 'dynamodb:GetItem'
-          Resource:   #TODO: 사용하고 있는 테이블만 허용하도록 제한해야 함
-            - 'arn:aws:dynamodb:ap-northeast-2:401482569934:table/*'
-        
-        - Effect: 'Allow'
+            - "dynamodb:PutItem"
+            - "dynamodb:DeleteItem"
+            - "dynamodb:Scan"
+            - "dynamodb:GetItem"
+          Resource: #TODO: 사용하고 있는 테이블만 허용하도록 제한해야 함
+            - "arn:aws:dynamodb:ap-northeast-2:401482569934:table/*"
+
+        - Effect: "Allow"
           Action:
-            - 'execute-api:ManageConnections'
+            - "execute-api:ManageConnections"
           Resource:
-            - 'arn:aws:execute-api:ap-northeast-2:401482569934:*/*/*/*'
+            - "arn:aws:execute-api:ap-northeast-2:401482569934:*/*/*/*"
 
 package:
   patterns:
@@ -50,14 +50,14 @@ package:
 
 functions:
   hello:
-    handler: src/lambda/handler.hello
+    handler: src/lambda/handler.create
     events:
       - http:
           path: /hello
           method: get
           cors:
-            origin: '*'
-            headers: '*'
+            origin: "*"
+            headers: "*"
 
   platform:
     handler: src/lambda/handler.get_platform
@@ -66,9 +66,9 @@ functions:
           path: /platform
           method: get
           cors:
-            origin: '*'
-            headers: '*'
-          
+            origin: "*"
+            headers: "*"
+
   hello-redis:
     handler: src/lambda/handler.hello_redis
     events:
@@ -76,9 +76,8 @@ functions:
           path: /hello-redis
           method: get
           cors:
-            origin: '*'
-            headers: '*'
-
+            origin: "*"
+            headers: "*"
   hello-db:
     handler: src/lambda/handler.hello_db
     events:
@@ -86,9 +85,14 @@ functions:
           path: /hello-db
           method: get
           cors:
-            origin: '*'
-            headers: '*'
+            origin: "*"
+            headers: "*"
 
+  like-handler:
+    handler: src/lambda/handler.like_handler
+    events:
+      - websocket:
+          route: like
   connect-handler:
     handler: src/lambda/handler.connect_handler
     events:
@@ -109,16 +113,57 @@ functions:
     events:
       - websocket:
           route: sendOpinion
+  get-battles-handler:
+    handler: src/lambda/handler.get_battles
+    events:
+      - websocket:
+          route: getBattles
+  create-battles-handler:
+    handler: src/lambda/handler.create_battle
+    events:
+      - websocket:
+          route: createBattle
+  get-battle-handler:
+    handler: src/lambda/handler.get_battle
+    events:
+      - websocket:
+          route: getBattle
+  start-battle-handler:
+    handler: src/lambda/handler.start_battle
+    events:
+      - websocket:
+          route: startBattle
+  end-battle-handler:
+    handler: src/lambda/handler.end_battle
+    events:
+      - websocket:
+          route: endBattle
+  start-round-handler:
+    handler: src/lambda/handler.start_round
+    events:
+      - websocket:
+          route: startRound
+  end-round-handler:
+    handler: src/lambda/handler.end_round
+    events:
+      - websocket:
+          route: endRound
   vote-handler:
     handler: src/lambda/handler.vote_handler
     events:
       - websocket:
           route: vote
-  like-handler:
-    handler: src/lambda/handler.like_handler
+  preparation-start-handler:
+    handler: src/lambda/handler.preparation_start_handler
     events:
       - websocket:
-          route: like
+          route: preparationStart
+    timeout: 100
+  finish-battle-handler:
+    handler: src/lambda/handler.finish_battle_handler
+    events:
+      - websocket:
+          route: finishBattle
 
 custom:
   customDomain:
@@ -128,13 +173,12 @@ custom:
     certificateName: ${env:CERTIFICATE_NAME}
     createRoute53Record: true
   pythonRequirements:
-    dockerizePip: true  # Use docker to install dependencies for non-linux environments
-    slim: true  # Slim down the size of the package by removing unneeded files
-    cacheLocation: '.pip_cache'
+    dockerizePip: true # Use docker to install dependencies for non-linux environments
+    slim: true # Slim down the size of the package by removing unneeded files
+    cacheLocation: ".pip_cache"
     noDeploy:
       - pytest
       - boto3
-
 
 plugins:
   - serverless-python-requirements

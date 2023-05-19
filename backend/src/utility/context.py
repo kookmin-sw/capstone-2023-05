@@ -45,3 +45,17 @@ class PostgresContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.client.close()
+
+    def execute_query(self, query: str):
+        operator = query.split(' ')[0]
+        with self.client as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                psql_cursor.execute(query)
+                if operator == "UPDATE" or operator == "INSERT":
+                    psql_ctx.commit()
+                elif operator == "SELECT":
+                    rows = psql_cursor.fetchall()
+        
+        if operator == "SELECT":
+            return rows
+        
