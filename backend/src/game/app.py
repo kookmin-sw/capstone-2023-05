@@ -240,7 +240,6 @@ def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
         compare_value = likes / time_alive
         return compare_value
 
-    best_opinions = [[] for _ in range(len(candidate_dropped_opinions))]
     best_opinions = candidate_dropped_opinions
 
     # 팀별로 Sort() & Filter & Limit N
