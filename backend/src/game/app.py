@@ -736,6 +736,7 @@ def get_current_round(event, context, wsclient):
                 round_query = f"""
                         SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
                         AND \"endTime\" IS NULL 
+                        AND \"startTime\" IS NOT NULL
                         ORDER BY \"roundNo\" DESC
                         LIMIT 1;
                         """
