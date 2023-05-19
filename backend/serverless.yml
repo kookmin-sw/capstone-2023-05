@@ -143,6 +143,11 @@ functions:
         events:
             - websocket:
                 route: startRound
+    get-current-round-handler:
+        handler: src/lambda/handler.get_current_round
+        events:
+            - websocket:
+                route: getCurrentRound 
     end-round-handler:
         handler: src/lambda/handler.end_round
         events:

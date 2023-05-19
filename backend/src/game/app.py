@@ -709,6 +709,81 @@ def end_battle(event, context, wsclient):
         }
 
 
+def parse_sql_result(rows, keys):
+    if not rows:
+        return [] 
+    
+    if len(rows[0]) != len(keys):
+        return Exception('Keys don\'t match the row results')
+    
+    parsed_result = [] 
+    for row in rows:
+        parsed_result.append(dict(zip(keys, row)))
+        
+    # For Integrity of datetime
+    parsed_result = json.loads(json.dumps(parsed_result, default=str)) 
+    return parsed_result
+
+def get_current_round(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
+
+    data = json.loads(event['body'])
+    battle_id = data['battleId']
+    try:
+        # Get current round from DynamoDB
+        with PostgresContext(**db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                round_query = f"""
+                        SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
+                        AND \"endTime\" IS NULL 
+                        ORDER BY \"roundNo\" DESC
+                        LIMIT 1;
+                        """
+                psql_cursor.execute(round_query)
+
+                rows = psql_cursor.fetchall()
+                psql_ctx.commit()
+        parsed_rows = parse_sql_result(rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
+
+        # Get DynamoDB connection ID's
+        paginator = dynamo_db.get_paginator('scan')
+        connections = []
+        for page in paginator.paginate(TableName=config.DYNAMODB_WS_CONNECTION_TABLE):
+            connections.extend(page['Items'])
+        
+        for connection in connections:
+            other_connection = connection['connectionID']['S']
+            if connection['battleID']['S'] == battle_id:
+                wsclient.send(
+                    connection_id=other_connection,
+                    data={
+                        "action": "getCurrentRound",
+                        "battleId": battle_id,
+                        "currentRound": parsed_rows
+                    }
+                )
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "Result": "Success"
+            })
+        }
+    except Exception as e:
+        wsclient.send(
+            connection_id= connection_id,
+            data= {
+                "error": str(e)
+            }
+        )
+    
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "Error": str(e)
+            })
+        } 
+
+
 def start_round(event, context, wsclient):
     connection_id = event['requestContext']['connectionId']
     body = json.loads(event['body'])
@@ -736,6 +811,9 @@ def start_round(event, context, wsclient):
                 'Result': result
             }
         )
+
+        # Broadcast current rounds to host, user
+        get_current_round(event, context, wsclient)
 
         return {
             "statusCode": 200,
