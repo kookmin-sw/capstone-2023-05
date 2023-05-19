@@ -12,6 +12,8 @@ module.exports = {
           'card-normal-B' : '#EEEFFF',
           'card-text-A' : '#F95150',
           'card-text-B' : '#322BDE',
+          'selected-A' : '#F4452F',
+          'selected-B' : '#322BDE'
         },
         backgroundImage: {
           'battleBar' : "url('./images/battleBar.png')",
@@ -19,6 +21,8 @@ module.exports = {
           'star' : "url('./images/star.svg')",
           'bestLikesA' : "url('./images/bestLikesA.svg')",
           'bestLikesB' : "url('./images/bestLikesB.svg')",
+          'beforeStart' : "url('./images/beforeStartBackground.svg')",
+          'players' : "url('./images/person.svg')",
         },
         backgroundSize:{
           'navBar' : '100%',
@@ -35,6 +39,9 @@ module.exports = {
           'likes' : '26%',
           'window-card' : '14.5vh',
           'time-bar' : '1%',
+          'team-card' : '38vh',
+          'team-card-name' : '22%',
+          'team-card-img' : '76.5%',
         },
         width:{
           '7/8' : '87.5%',
@@ -45,6 +52,7 @@ module.exports = {
           'sendChat':'74%',
           'card' : '18.5%',
           'window-card':'12.34vw',
+          'team-card' : '23vw'
         },
         borderRadius:{
           'card': '15px'
@@ -58,6 +66,7 @@ module.exports = {
         margin:{
           'navBar' : '21%',
           'opinion' : '11%',
+          'select-team' : '23%',
         },
         left:{
           '1/5' : '20%',
