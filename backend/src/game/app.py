@@ -318,8 +318,10 @@ def preparation_start_handler(event, context, wsclient):
                     drop_orders.extend([str(ad['order']) for ad in old_ads[idx][:3]])
                     old_ads[idx] = old_ads[idx][3:]
 
+                # TODO: 시간 계산이 되지 않는다?
+                # ValueError: time data '' does not match format '%Y-%m-%d %H:%M:%S.%f'
                 for ad in old_ads[idx]:
-                    ad["likes_per_refresh_time"] = ad["likes"] / (datetime.now() - ad["publishTime"]).total_seconds()
+                    ad["likes_per_refresh_time"] = ad["likes"] / (datetime.now() - datetime.strptime(ad["publishTime"], '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
                 old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])    # old_ads 의견들 중 상위 3개 선정
             
