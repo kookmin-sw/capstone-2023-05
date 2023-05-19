@@ -287,23 +287,17 @@ def preparation_start_handler(event, context, wsclient):
         rows = psql_ctx.execute_query(select_query)
 
         # 팀별로 의견을 나눈다.
-        best3_candidates, candidates, all_candidates_dropped = [[], []], [[], []], [[], []]
+        candidates, all_candidates_dropped = [[], []], [[], []]
         for row in rows:
             f = csv.reader([row[0]], delimiter=',', quotechar='\"')
             row = next(f); row[0] = row[0][1:]; row[2] = int(row[2]); row[3] = int(row[3]); row[4] = int(row[4]); row[-1] = int(row[-1][:-1])
             return_info = {"userId": row[0], "order": row[3], "likes": row[4], "content": row[5], "publishTime": row[6], "dropTime": row[7], "status": row[8]}
             if row[-1] == team_ids[0]:
                 all_candidates_dropped[0].append(return_info)
-                if row[-2] != "CANDIDATE":
-                    best3_candidates[0].append(row[:5])
-                else:
-                    candidates[0].append(return_info)
+                candidates[0].append(return_info)
             else:
                 all_candidates_dropped[1].append(return_info)
-                if row[-2] != "CANDIDATE":
-                    best3_candidates[1].append(row[:5])
-                else:
-                    candidates[1].append(return_info)
+                candidates[1].append(return_info)
 
         sampling_number = 12
         tmp = [[], []]
