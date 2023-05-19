@@ -277,7 +277,7 @@ def preparation_start_handler(event, context, wsclient):
     information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']} for connection in response]
 
     old_ads = [[], []]
-    for refresh in range(refresh_cnt):
+    for refresh_cnt in range(refresh_cnt):
         time.sleep(refresh_time)
         
         # 현재 라운드의 모든 의견을 가져온다.
@@ -311,17 +311,15 @@ def preparation_start_handler(event, context, wsclient):
         for idx in range(len(old_ads)):
             # 처음에 요청했다면, Ads는 존재하지 않기 때문
             if len(old_ads[idx]):
-                # refresh 횟수가 3번 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
+                # refresh_cnt 횟수가 3번 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
                 # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
                 drop_orders = []
-                if refresh >= 2:
+                if refresh_cnt >= 2:
                     drop_orders.extend([str(ad['order']) for ad in old_ads[idx][:3]])
                     old_ads[idx] = old_ads[idx][3:]
 
                 for ad in old_ads[idx]:
-                    # TODO: 이 식도 바뀌어야 할텐데??
-                    # 승호 형이 쓰고 있는 "publishTime"과 "droppedTime"을 잘 활용해보자.
-                    ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
+                    ad["likes_per_refresh_time"] = ad["likes"] / (datetime.now() - ad["publishTime"]).total_seconds()
                 old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])    # old_ads 의견들 중 상위 3개 선정
             
@@ -336,7 +334,7 @@ def preparation_start_handler(event, context, wsclient):
             elif len(old_ads[idx]) and len(candidates[idx]) >= 9:
                 sampling_number = 9
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
-            for ad in tmp[idx]:
+            for ad in tmp[idx][3:] if refresh_cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
         if len(publish_orders):
