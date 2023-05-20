@@ -276,7 +276,7 @@ def preparation_start_handler(event, context, wsclient):
     information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']} for connection in response]
 
     old_ads = [[], []]
-    for refresh_cnt in range(refresh_cnt):
+    for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
         
         # 현재 라운드의 모든 의견을 가져온다.
@@ -308,7 +308,7 @@ def preparation_start_handler(event, context, wsclient):
             if len(old_ads[idx]):
                 # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
                 # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
-                if refresh_cnt >= 2:
+                if cnt >= 2:
                     drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:3]])
                     old_ads[idx] = old_ads[idx][3:]
 
