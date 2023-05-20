@@ -137,7 +137,7 @@ def send_handler(event, context, wsclient):
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
 
-    insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW(), NULL, NULL, \'{status}\')'
+    insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\', NULL, NULL, \'{status}\')'
     psql_ctx.execute_query(insert_query)
     
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
@@ -314,7 +314,7 @@ def preparation_start_handler(event, context, wsclient):
 
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
-                old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
+                old_ads[idx].sort(key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
                 drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][3:]])
 
@@ -328,10 +328,10 @@ def preparation_start_handler(event, context, wsclient):
                 publish_orders.append(str(ad['order']))
 
         if len(publish_orders):
-            update_query = f'UPDATE \"Opinion\" SET \"publishTime\"=NOW(), \"status\" = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
+            update_query = f'UPDATE \"Opinion\" SET \"publishTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' , \"status\" = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
             psql_ctx.execute_query(update_query)
         if len(drop_orders):
-            update_query = f'UPDATE \"Opinion\" SET \"dropTime\"=NOW(), \"status\" = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
+            update_query = f'UPDATE \"Opinion\" SET \"dropTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' , \"status\" = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
             psql_ctx.execute_query(update_query)
 
         # tmp에 있는 불필요 정보 삭제해서 new_ads로 복사
