@@ -309,20 +309,14 @@ def preparation_start_handler(event, context, wsclient):
                 # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
                 # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
                 if refresh_cnt >= 2:
-                    for ad in old_ads[idx][:3]:
-                        drop_orders.append(str(ad["order"]))
-                        ad["dropTime"] = datetime.now()
+                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:3]])
                     old_ads[idx] = old_ads[idx][3:]
 
                 for ad in old_ads[idx]:
-                    # print(ad)
-                    ad["likes_per_refresh_time"] = ad["likes"] / (datetime.now() - ad["publishTime"]).total_seconds()
+                    ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
                 old_ads[idx] = sorted(old_ads[idx], key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
-
-                for ad in old_ads[idx][3:]:
-                    drop_orders.append(str(ad["order"]))
-                    ad["dropTime"] = datetime.now()
+                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][3:]])
 
             # candidates 중 랜덤 선정
             if (not len(old_ads[idx]) and len(candidates[idx]) <= 12) or (len(old_ads[idx]) and len(candidates[idx]) < 9):
@@ -332,7 +326,6 @@ def preparation_start_handler(event, context, wsclient):
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
             for ad in tmp[idx][3:] if refresh_cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
-                ad["publishTime"] = datetime.now()
 
         if len(publish_orders):
             update_query = f'UPDATE \"Opinion\" SET \"publishTime\"=NOW(), \"status\" = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
