@@ -72,7 +72,7 @@ def init_join_handler(event, context, wsclient):
     battle_id = data['battleId']
     nickname = data['nickname']
     user_id = data['userId']
-    team_id = ""
+    team_id, round = "", ""
 
     # DynamoDB에 정보 등록
     dynamo_db.put_item(
@@ -81,16 +81,17 @@ def init_join_handler(event, context, wsclient):
             'connectionID': {'S': connection_id},
             'battleID': {'S': battle_id},
             'teamID': {'S': team_id},
+            'currRound': {'S': round},
             'userID': {'S': user_id},
             'nickname': {'S': nickname}
         }
     )
 
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
-    select_query = f"SELECT \"teamId\", name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
+    select_query = f"SELECT \"teamId\", name, image FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
     rows = psql_ctx.execute_query(select_query)
-    team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
-
+    team_names = [{"teamId": row[0], "teamName": row[1], "image": bytes(row[2]).decode()} for row in rows]
+    
     wsclient.send(
         connection_id=connection_id,
         data={
@@ -206,8 +207,9 @@ def vote_handler(event, context, wsclient):
 
     # Support 테이블에 팀 선택 기록 저장
     round = json.loads(event['body'])['round']
-    insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
-    psql_ctx.execute_query(insert_query)
+    if round:
+        insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+        psql_ctx.execute_query(insert_query)
 
     response = {
         'statusCode': 200,
