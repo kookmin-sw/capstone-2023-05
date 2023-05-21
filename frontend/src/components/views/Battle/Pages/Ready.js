@@ -1,26 +1,40 @@
 import React from "react";
+import TeamCards from "../../cardView/TeamCards";
 
-function Ready({ isReady, onReadyClick, playerScore, opponentScore }) {
+// player의 게임 시작 전 방 화면
+function BeforeStart() {
   return (
-    <div className="bg-cover bg-center flex flex-col items-center justify-center h-screen">
-      <div className="bg-contain bg-no-repeat h-1/2 w-1/2 flex flex-col items-center justify-center">
-        <p className="text-4xl font-bold mb-2">
-          {playerScore} : {opponentScore}
-        </p>
-        <p className="text-xl">
-          {isReady ? "Waiting for opponent..." : "Click Ready to start!"}
-        </p>
+    <div>
+      <div className="flex flex-col items-center bg-beforeStart bg-cover w-screen h-screen">
+        <div className="flex">
+          {/** 양 팀카드 표시  */}
+          <div className="flex">
+            <TeamCards data={"player"} />
+          </div>
+        </div>
+
+        {/* 방장 게임 시작 전 */}
+        <div className="flex pt-aboveBest">
+          <div className="flex bg-players h-8 w-8 bg-cover" />
+          <div className=" text-3xl ml-3">10</div>
+        </div>
+
+        <div id="beforeStart" className=" text-3xl mt-8">
+          방장이 게임을 시작하기 기다리고 있습니다...
+        </div>
+        {/* */}
+
+        {/* 게임 시작 후 팀 선택 시간 */}
+        <div className="flex flex-col items-center pt-aboveBest">
+          <div className=" text-3xl ml-3 font-light">Start</div>
+          <div id="readyToStartTimer" className=" text-5xl ml-3 mt-3">
+            1:00
+          </div>
+        </div>
+        {/* */}
       </div>
-      {!isReady && (
-        <button
-          className="mt-4 px-4 py-2 rounded-md bg-blue-500 text-white"
-          onClick={onReadyClick}
-        >
-          Ready
-        </button>
-      )}
     </div>
   );
 }
 
-export default Ready;
+export default BeforeStart;
