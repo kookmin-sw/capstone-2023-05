@@ -88,9 +88,9 @@ def init_join_handler(event, context, wsclient):
     )
 
     # 어떤 팀이 있는지 RDS에서 정보 가져오기
-    select_query = f"SELECT \"teamId\", name FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
+    select_query = f"SELECT \"teamId\", name, image FROM \"Team\" WHERE \"battleId\" = \'{battle_id}\'"
     rows = psql_ctx.execute_query(select_query)
-    team_names = [{"teamId": row[0], "teamName": row[1]} for row in rows]
+    team_names = [{"teamId": row[0], "teamName": row[1], "image": bytes(row[2]).decode()} for row in rows]
     
     wsclient.send(
         connection_id=connection_id,
