@@ -9,7 +9,7 @@ const modal = document.getElementById('modal');
   return (
     <div id="modal" className='flex flex-col justify-center items-center h-except-window-card bg-black bg-opacity-30 z-10 inset-0'>
         <div className='flex w-opinions-modal'>
-            <span className='close justify-start ml-auto text-gray-300 hover:text-gray-900 focus:text-gray-900 text-3xl' onClick={modalOnOff}>&times;</span>
+            <span className='close justify-start ml-auto text-gray-300 hover:text-gray-900 hover:cursor-pointer focus:text-gray-900 text-3xl' onClick={modalOnOff}>&times;</span>
         </div>
         <div className='flex w-opinions-modal h-opinions-modal border-solid rounded-card bg-white'>
             <div className='flex flex-col w-2/4  border-solid border-r-2'>
