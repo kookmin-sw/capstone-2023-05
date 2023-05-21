@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import InGameNavBar from '../NavBar/InGameNavBar'
 import CardComponent from '../cardView/CardComponent'
+import TeamsOpinions from '../cardView/TeamsOpinions'
 
 const ChatComponentHost = (props) => {
   const [message, setMessage] = useState('');
@@ -8,8 +9,8 @@ const ChatComponentHost = (props) => {
   const maxValue = 180; // 3분 = 180초
   const interval = 60; // 1분 = 60초
 
-  // const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
-  const dev = 'wss://4a6dvup00h.execute-api.ap-northeast-2.amazonaws.com/jwlee';
+  const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
+  // const dev = 'wss://4a6dvup00h.execute-api.ap-northeast-2.amazonaws.com/jwlee';
 
   // 서버로부터 받을 데이터
   let recvData;
@@ -115,7 +116,12 @@ const ChatComponentHost = (props) => {
     }
   }
 
-  
+  const modal = document.getElementById('modal');
+  const modalOnOff = function(){
+      modal.classList.remove('hidden');
+      modal.classList.add('absolute');
+  }
+
   // 컴포넌트 렌더링
   return (
     <div className='flex flex-col h-screen'>
@@ -130,6 +136,9 @@ const ChatComponentHost = (props) => {
         ))}
       </div>
       <div className='flex flex-1 my-auto'>
+        <div id='modal' className='hidden w-screen mt-window-card z-10 inset-0'>
+          <TeamsOpinions/>
+        </div>
         {/* 좌측 광고 */}
         <div className='flex w-1/2 h-full bg-background-color'>
           {/* opinions */}
@@ -139,7 +148,7 @@ const ChatComponentHost = (props) => {
               <div className=' mb-2'>
                 <div className=' inline-block bg-star bg-cover w-3 h-3 mr-3 cursor-not-allowed'/>
                 <span className=' font-bold mr-3'>Best 3</span>
-                <button className=' text-gray-500 text-xs underline'>Last</button>
+                <button className='last text-gray-500 text-xs underline' onClick={modalOnOff}>Last</button>
               </div>
             </div>
 
@@ -181,7 +190,7 @@ const ChatComponentHost = (props) => {
               <div className=' mb-2'>
                 <div className=' inline-block bg-star bg-cover w-3 h-3 mr-3 cursor-not-allowed'/>
                 <span className=' font-bold mr-3'>Best 3</span>
-                <button className=' text-gray-500 text-xs underline'>Last</button>
+                <button className='last text-gray-500 text-xs underline' onClick={modalOnOff}>Last</button>
               </div>
             </div>
 

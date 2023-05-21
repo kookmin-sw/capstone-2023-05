@@ -13,14 +13,14 @@ function TeamCard(props) {
     <>
     {(teamAB === 1)?(
     <div className={`flex flex-col w-team-card h-team-card rounded-card p-1 shadow-lg shadow-red-300  ${selectedTeam === 'A' ? 'bg-selected-A' : 'bg-white'}`}>
-        <img src={`../../../images/${teamImage}.png`} className=' h-team-card-img bg-auto bg-red-100 pb-1 rounded-t-card' alt={teamName}/>
+        <img src={require(`../../../images/${teamImage}.png`)} className=' h-team-card-img bg-auto bg-red-100 pb-1 rounded-t-card' alt={teamName}/>
         <div className='flex items-center justify-center h-team-card-name bg-bestLikesA bg-cover rounded-b-card mt-auto text-white font-bold text-2xl'>
             {teamName}
         </div> 
     </div> 
         ):(
     <div className={`flex flex-col w-team-card h-team-card rounded-card p-1 shadow-lg shadow-blue-300 ${selectedTeam === 'B' ? 'bg-selected-B' : 'bg-white'}`}>
-        <img src={`../../../images/${teamImage}.png`} className=' h-team-card-img bg-auto bg-blue-100 pb-1 rounded-t-card' alt={teamName}/>
+        <img src={require(`../../../images/${teamImage}.png`)} className=' h-team-card-img bg-auto bg-blue-100 pb-1 rounded-t-card' alt={teamName}/>
         <div className='flex items-center justify-center h-team-card-name bg-bestLikesB bg-cover rounded-b-card mt-auto text-white font-bold text-2xl'>
             {teamName}
         </div> 

@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 
 import LandingPage from './components/views/LandingPage/LandingPage'
-import LoginPage from './components/views/LoginPage/LoginPage'
+import TeamsOpinions from './components/views/cardView/TeamsOpinions'
 import MakingRoomPage from './components/views/MakingRoomPage/MakingRoomPage'
 import MyPage from './components/views/MyPage/MyPage'
 import BattlePage from './components/views/BattlePage/BattlePage'
@@ -27,6 +27,7 @@ class App extends Component {
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/game" element={<BattlePage />} />
             <Route path="/before" element={<BeforeStart />} />
+            <Route path="/teamsOpinions" element={<TeamsOpinions />} />
           </Routes>
         </Router>
       </>

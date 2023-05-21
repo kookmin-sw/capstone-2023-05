@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import InGameNavBar from '../NavBar/InGameNavBar'
 import CardComponent from '../cardView/CardComponent'
+import TeamsOpinions from '../cardView/TeamsOpinions'
 
 const ChatComponent = (props) => {
   const [message, setMessage] = useState('');
@@ -8,8 +9,8 @@ const ChatComponent = (props) => {
   const maxValue = 180; // 3분 = 180초
   const interval = 60; // 1분 = 60초
 
-  // const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
-  const dev = 'wss://4a6dvup00h.execute-api.ap-northeast-2.amazonaws.com/jwlee';
+  const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
+  // const dev = 'wss://4a6dvup00h.execute-api.ap-northeast-2.amazonaws.com/jwlee';
 
   // 서버로부터 받을 데이터
   let recvData;
@@ -115,6 +116,11 @@ const ChatComponent = (props) => {
     }
   }
 
+  const modal = document.getElementById('modal');
+  const modalOnOff = function(){
+      modal.classList.add('absolute');
+      modal.classList.remove('hidden');
+  }
   
   // 컴포넌트 렌더링
   return (
@@ -132,6 +138,9 @@ const ChatComponent = (props) => {
       <div className='flex flex-1 my-auto'>
         {/* 좌측 광고 */}
         <div className='flex w-2/3 h-full bg-background-color'>
+          <div id='modal' className='hidden w-2/3 mt-window-card z-10 inset-0'>
+            <TeamsOpinions/>
+          </div>
           {/* opinions */}
           <div className='flex flex-col w-5/6 h-full ml-opinion items-center pt-aboveBest'>
               {/* best */}
@@ -139,7 +148,7 @@ const ChatComponent = (props) => {
               <div className=' mb-2'>
                 <div className=' inline-block bg-star bg-cover w-3 h-3 mr-3 cursor-not-allowed'/>
                 <span className=' font-bold mr-3'>Best 3</span>
-                <button className=' text-gray-500 text-xs underline'>Last</button>
+                <button className=' text-gray-500 text-xs underline' onClick={modalOnOff}>Last</button>
               </div>
             </div>
 

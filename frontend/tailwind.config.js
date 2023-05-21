@@ -19,6 +19,7 @@ module.exports = {
           'battleBar' : "url('./images/battleBar.png')",
           'like' : "url('./images/like.svg')",
           'star' : "url('./images/star.svg')",
+          'fire' : "url('./images/fire.svg')",
           'bestLikesA' : "url('./images/bestLikesA.svg')",
           'bestLikesB' : "url('./images/bestLikesB.svg')",
           'beforeStart' : "url('./images/beforeStartBackground.svg')",
@@ -38,10 +39,15 @@ module.exports = {
           'opinion' : '74%',
           'likes' : '26%',
           'window-card' : '14.5vh',
+          'except-window-card' : '85.5vh',
           'time-bar' : '1%',
           'team-card' : '38vh',
           'team-card-name' : '22%',
           'team-card-img' : '76.5%',
+          'opinions-modal' : '620px',
+          'opinions-image' : '220px',
+          'opinions-team-name':'50px',
+          'opinions-opinions' : '350px',
         },
         width:{
           '7/8' : '87.5%',
@@ -52,7 +58,8 @@ module.exports = {
           'sendChat':'74%',
           'card' : '18.5%',
           'window-card':'12.34vw',
-          'team-card' : '23vw'
+          'team-card' : '23vw',
+          'opinions-modal' : '790px',
         },
         borderRadius:{
           'card': '15px'
@@ -62,8 +69,10 @@ module.exports = {
           'navBar' : '21%',
           'aboveAds' : '7%',
           'opinion' : '11%',
+          'modal-opinions' : '8%',
         },
         margin:{
+          'window-card' : '14.5vh',
           'navBar' : '21%',
           'opinion' : '11%',
           'select-team' : '23%',
