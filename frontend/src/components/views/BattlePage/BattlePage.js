@@ -106,7 +106,7 @@ const ChatComponent = (props) => {
   const messageSend = () => {
     socket.send(JSON.stringify({'action':'sendOpinion', 'round': round, 'opinion': message})); // 서버로 메시지 전송
     console.log(`Message: ${message}  Sent`);
-    setMessage(''); // 메시지 입력 필드 초기화
+    setMessage(""); // 메시지 입력 필드 초기화
   };
   
   const handleKeyPress = (event) => {
@@ -123,7 +123,7 @@ const ChatComponent = (props) => {
   
   // 컴포넌트 렌더링
   return (
-    <div className='flex flex-col h-screen'>
+    <div className="flex flex-col h-screen">
       {/* 채팅 UI 구현 */}
       {/* 상단 배너 */}
       <InGameNavBar data={[`${'치킨'}, ${'피자'}, ${teamId}`,round]}/>
@@ -156,7 +156,7 @@ const ChatComponent = (props) => {
               <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${1}`}/>
               <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${1}`}/>
             </div>
-      
+
             {/* ads */}
             <div className='flex w-full pt-aboveAds'>
               <div className=' inline-block bg-star bg-cover w-3 h-3 mr-3'/>
@@ -183,17 +183,18 @@ const ChatComponent = (props) => {
           </div>
 
           {/* timer */}
-          <span id='adsTimer' className=' flex font-bold pt-aboveBest w-full justify-center text-gray-500'>1:00</span>
+          <div className=' flex font-bold pt-aboveBest mr-9 text-gray-500'>0:59</div>
+
         </div>
 
         {/* 우측 채팅 바 */}
         <div className='flex flex-col w-1/3 bg-white h-full'> 
-          <div id='result' className='text-md h-7/8 items-baseline leading-none m-5 px-1 py-1 inline-block'></div>
+          <div id='result' className='rounded text-md leading-none border-dotted border-x-4 border-y-4 border-back-color mx-5 my-5 px-1 py-1 inline-block'></div>
           {/* 아래 채팅 박스 */}
-          <div id='chat' className='flex border-t-2 h-1/8 items-center justify-center'>
+          <div id='chat' className='flex mt-auto border-t-2 h-1/8 items-center justify-center'>
             <div className='flex items-center w-5/6 h-1/2'>
-              <input type="text" id='txt' className=' bg-background-color rounded-lg h-full w-sendChat px-2' placeholder='Enter your opinion' value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={handleKeyPress} />
-              <button id='send' disabled={!message} className={!message?'text-sm rounded-lg bg-gray-400 text-white ml-auto w-sendbtn h-full':' text-sm rounded-lg bg-sendBtn text-white ml-auto w-sendbtn h-full'} onClick={messageSend}>Send</button>
+              <input type="text" id='txt' className=' bg-background-color rounded-lg h-full w-sendChat px-2' placeholder='Enter your opinion' value={message} onChange={(e) => setMessage(e.target.value)} />
+              <button id='send' disabled={!message} className={!message?'text-sm rounded-lg bg-gray-400 text-white ml-auto w-sendbtn h-full':' text-sm rounded-lg bg-sendBtn text-white ml-auto w-sendbtn h-full'} onClick={functionRef.current}>Send</button>
             </div>
           </div>
         </div>
@@ -203,5 +204,3 @@ const ChatComponent = (props) => {
 };
 
 export default ChatComponent;
-
-
