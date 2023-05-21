@@ -72,7 +72,7 @@ def init_join_handler(event, context, wsclient):
     battle_id = data['battleId']
     nickname = data['nickname']
     user_id = data['userId']
-    team_id = ""
+    team_id, round = "", ""
 
     # DynamoDB에 정보 등록
     dynamo_db.put_item(
@@ -81,6 +81,7 @@ def init_join_handler(event, context, wsclient):
             'connectionID': {'S': connection_id},
             'battleID': {'S': battle_id},
             'teamID': {'S': team_id},
+            'currRound': {'S': round},
             'userID': {'S': user_id},
             'nickname': {'S': nickname}
         }
