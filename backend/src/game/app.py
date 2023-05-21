@@ -207,8 +207,9 @@ def vote_handler(event, context, wsclient):
 
     # Support 테이블에 팀 선택 기록 저장
     round = json.loads(event['body'])['round']
-    insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
-    psql_ctx.execute_query(insert_query)
+    if round:
+        insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
+        psql_ctx.execute_query(insert_query)
 
     response = {
         'statusCode': 200,
