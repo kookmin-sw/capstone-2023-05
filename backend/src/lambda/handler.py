@@ -81,6 +81,11 @@ def end_battle(event, context, wsclient):
 def start_round(event, context, wsclient):
     return app.start_round(event, context, wsclient)
 
+@cors
+@wsclient
+def get_current_round(event, context, wsclient):
+    return app.get_current_round(event, context, wsclient)
+
 
 @cors
 @wsclient
