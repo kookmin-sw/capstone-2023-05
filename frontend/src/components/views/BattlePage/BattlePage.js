@@ -10,16 +10,15 @@ const ChatComponent = (props) => {
   const interval = 60; // 1분 = 60초
 
   const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
-  // const dev = 'wss://4a6dvup00h.execute-api.ap-northeast-2.amazonaws.com/jwlee';
 
   // 서버로부터 받을 데이터
   let recvData;
+
   const battleId = '000001';
   const userId = 'user123@example.com'
   const nickname = 'hoon'
   const teamId = "1"; // 팀 아이디 {teamA : 1, teamB : 2, host : ?}
   let round = 1;
-
   
   const socket = new WebSocket(dev);
   useEffect(() => {

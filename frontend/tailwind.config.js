@@ -28,6 +28,9 @@ module.exports = {
         backgroundSize:{
           'navBar' : '100%',
         },
+        backgroundSize:{
+          'navBar' : '100%',
+        },
         fontSize:{
           'nickname' :'1.5vh',
           'body' : '1vh',

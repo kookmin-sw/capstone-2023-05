@@ -1,6 +1,7 @@
 #!/bin/bash
 
-aws dynamodb create-table \
+aws dynamodb --endpoint-url http://localhost:8000 \
+    create-table \
     --table-name ws-connections \
     --attribute-definitions \
         AttributeName=battleID,AttributeType=S \
