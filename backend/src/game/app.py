@@ -501,8 +501,8 @@ def create_battle(event, context, wsclient):
         wsclient.send(
             connection_id=connection_id,
             data={
-                'message': 'Battle Creation Success',
-                'data': {
+                'action': 'createBattle',
+                'result': {
                     "battle_id": battle_id,
                     "battle_title": battle_title,
                 }
@@ -551,8 +551,8 @@ def get_battles(event, context, wsclient):
         wsclient.send(
             connection_id=connection_id,
             data={
-                'message': 'Request Success',
-                'battles': result
+                'action': 'getBattles',
+                'result': result
             }
         )
 
@@ -597,8 +597,8 @@ def get_battle(event, context, wsclient):
         wsclient.send(
             connection_id=connection_id,
             data={
-                'message': 'Request Success',
-                'battles': result
+                'action': 'getBattle',
+                'result': result
             }
         )
 
@@ -643,13 +643,11 @@ def start_battle(event, context, wsclient):
 
         result = json.dumps(rows, default=str)
 
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                'message': 'Request Success',
-                'battles': result
-            }
-        )
+        
+        propagate_data(battle_id, wsclient, {
+            "action": "startBattle",
+            "result": f"""Battle Started: {battle_id}"""
+        })
 
         return {
             "statusCode": 200,
@@ -691,13 +689,10 @@ def end_battle(event, context, wsclient):
                 psql_ctx.commit()
         result = json.dumps(rows, default=str)
 
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                'message': 'Battle Ended',
-                'battle_id': battle_id 
-            }
-        )
+        propagate_data(battle_id, wsclient, {
+            'action': 'endBattle',
+            'result': f"""Battle Successfully ended: {battle_id}"""
+        })
 
         return {
             "statusCode": 200,
@@ -740,69 +735,20 @@ def parse_sql_result(rows, keys):
     return parsed_result
 
 
-def get_current_round(event, context, wsclient):
-    connection_id = event['requestContext']['connectionId']
+def propagate_data(battle_id, wsclient, data):
+    # Get DynamoDB connection ID's
+    paginator = dynamo_db.get_paginator('scan')
+    connections = []
+    for page in paginator.paginate(TableName=config.DYNAMODB_WS_CONNECTION_TABLE):
+        connections.extend(page['Items'])
 
-    data = json.loads(event['body'])
-    battle_id = data['battleId']
-    try:
-        # Get current round from DynamoDB
-        with PostgresContext(**db_config) as psql_ctx:
-            with psql_ctx.cursor() as psql_cursor:
-                round_query = f"""
-                        SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
-                        AND \"endTime\" IS NULL 
-                        AND \"startTime\" IS NOT NULL
-                        ORDER BY \"roundNo\" DESC
-                        LIMIT 1;
-                        """
-                psql_cursor.execute(round_query)
-
-                rows = psql_cursor.fetchall()
-                psql_ctx.commit()
-        parsed_rows = parse_sql_result(
-            rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
-
-        # Get DynamoDB connection ID's
-        paginator = dynamo_db.get_paginator('scan')
-        connections = []
-        for page in paginator.paginate(TableName=config.DYNAMODB_WS_CONNECTION_TABLE):
-            connections.extend(page['Items'])
-
-        for connection in connections:
-            other_connection = connection['connectionID']['S']
-            if connection['battleID']['S'] == battle_id:
-                wsclient.send(
-                    connection_id=other_connection,
-                    data={
-                        "action": "getCurrentRound",
-                        "battleId": battle_id,
-                        "currentRound": parsed_rows
-                    }
-                )
-        return {
-            "statusCode": 200,
-            "body": json.dumps({
-                "Result": "Success"
-            })
-        }
-    except Exception as e:
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                "error": str(e)
-            }
-        )
-
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "Error": str(e)
-            })
-        }
-
-# Helper Function
-
+    for connection in connections:
+        other_connection = connection['connectionID']['S']
+        if connection['battleID']['S'] == battle_id:
+            wsclient.send(
+                connection_id=other_connection,
+                data=data
+            )
 
 def get_start_round(battle_id):
     # Get current round from DynamoDB
@@ -824,7 +770,8 @@ def get_start_round(battle_id):
     if parsed_rows and type(parsed_rows) is list:
         return parsed_rows[0]["roundNo"]
     else:
-        return -1 
+        return -1
+
 
 def get_single_current_round(battle_id):
     # Get current round from DynamoDB
@@ -846,7 +793,8 @@ def get_single_current_round(battle_id):
     if parsed_rows and type(parsed_rows) is list:
         return parsed_rows[0]["roundNo"]
     else:
-        return -1 
+        return -1
+
 
 def get_max_rounds_no(battle_id):
     # Get Maximum round count from discussion battle
@@ -869,7 +817,8 @@ def start_round(event, context, wsclient):
     body = json.loads(event['body'])
     battle_id = body['battleId']
     current_round = get_start_round(battle_id=battle_id)
-    
+    max_no_of_rounds = get_max_rounds_no(battle_id)
+
     try:
         if current_round == -1:
             raise Exception('Either the battle ended or no round was found')
@@ -887,16 +836,11 @@ def start_round(event, context, wsclient):
                 psql_ctx.commit()
         result = json.dumps(rows, default=str)
 
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                'message': 'Request Success',
-                'Result': result
-            }
-        )
-
         # Broadcast current rounds to host, user
-        get_current_round(event, context, wsclient)
+        propagate_data(battle_id, wsclient, {
+            "action": "startRound",
+            "result": f"""Started Round/Total Round: {current_round}/{max_no_of_rounds}"""
+        })
 
         return {
             "statusCode": 200,
@@ -926,7 +870,6 @@ def end_round(event, context, wsclient):
     battle_id = body['battleId']
     current_round = get_single_current_round(battle_id=battle_id)
     max_no_of_rounds = get_max_rounds_no(battle_id=battle_id)
-    print(current_round, max_no_of_rounds)
 
     try:
         if current_round == -1 or max_no_of_rounds == -1:
@@ -943,21 +886,19 @@ def end_round(event, context, wsclient):
 
                 rows = psql_cursor.fetchall()
                 psql_ctx.commit()
-        result = json.dumps(rows, default=str)
+        # result = json.dumps(rows, default=str)
 
-       
-        wsclient.send(
-            connection_id=connection_id,
-            data={
-                'message': 'Request Success',
-                'Result': f"""Round ended: {current_round} / Total Rounds: {max_no_of_rounds}"""
-            }
-        )
 
-        # Check endbattle
+        propagate_data(battle_id, wsclient, {
+            "action": "endRound",
+            'result': f"""Ended Round/Total Round: {current_round}/{max_no_of_rounds}"""
+        })
+
+
+        # Check if the battle is ended
         if current_round == max_no_of_rounds:
             end_battle(event, context, wsclient)
-
+            finish_battle_handler(event, context, wsclient)
 
         return {
             "statusCode": 200,
