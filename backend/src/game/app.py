@@ -194,22 +194,35 @@ def vote_handler(event, context, wsclient):
     rows = psql_ctx.execute_query(select_query)
     team_name = rows[0][0]
 
-    # 팀 선택 결과 전송
-    wsclient.send(
-        connection_id=connection_id,
-        data={
-            "action": "voteResult",
-            "result": "success",
-            "teamId": team_id,
-            "teamName": team_name
-        }
-    )
-
     # Support 테이블에 팀 선택 기록 저장
-    round = json.loads(event['body'])['round']
-    if round:
+    round = get_single_current_round(battle_id)
+    if round != -1:
         insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
         psql_ctx.execute_query(insert_query)
+        # 팀 선택 결과 전송
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "action": "voteResult",
+                "result": "success",
+                "teamId": team_id,
+                "teamName": team_name
+            }
+        )
+    else:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "result": "Error",
+                "message": "Either no rounds are on-going or the battle has ended"
+            }
+        )
+        
+
+    
+
+    
+        
 
     response = {
         'statusCode': 200,
