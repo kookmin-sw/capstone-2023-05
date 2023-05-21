@@ -276,7 +276,7 @@ def preparation_start_handler(event, context, wsclient):
     information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']} for connection in response]
 
     old_ads = [[], []]
-    for _ in range(refresh_cnt):
+    for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
         
         # 현재 라운드의 모든 의견을 가져온다.
@@ -302,19 +302,21 @@ def preparation_start_handler(event, context, wsclient):
 
         sampling_number = 12
         tmp = [[], []]
-        publish_orders = []
+        publish_orders, drop_orders = [], []
         for idx in range(len(old_ads)):
-            # 요청 받은 12개 의견들 중 상위 3개 선정
-            if len(old_ads[idx]):    # 처음에 요청했다면, Ads는 존재하지 않기 때문
+            # 처음에 요청했다면, Ads는 존재하지 않기 때문
+            if len(old_ads[idx]):
+                # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
+                # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
+                if cnt >= 2:
+                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:3]])
+                    old_ads[idx] = old_ads[idx][3:]
+
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
                 old_ads[idx].sort(key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
-            
-                drop_orders = [str(ad['order']) for ad in old_ads[idx][3:]]
-                if len(drop_orders):
-                    update_query = f'UPDATE \"Opinion\" SET \"dropTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\', \"status\" = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
-                    psql_ctx.execute_query(update_query)
+                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][3:]])
 
             # candidates 중 랜덤 선정
             if (not len(old_ads[idx]) and len(candidates[idx]) <= 12) or (len(old_ads[idx]) and len(candidates[idx]) < 9):
@@ -322,29 +324,31 @@ def preparation_start_handler(event, context, wsclient):
             elif len(old_ads[idx]) and len(candidates[idx]) >= 9:
                 sampling_number = 9
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
-            for ad in tmp[idx]:
+            for ad in tmp[idx][3:] if refresh_cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
         if len(publish_orders):
             update_query = f'UPDATE \"Opinion\" SET \"publishTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' , \"status\" = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
             psql_ctx.execute_query(update_query)
+        if len(drop_orders):
+            update_query = f'UPDATE \"Opinion\" SET \"dropTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' , \"status\" = \'DROPPED\' WHERE \"order\" IN ({",".join(drop_orders)})'
+            psql_ctx.execute_query(update_query)
 
-        new_ads = [[], []]
-        for idx in range(len(tmp)):
-            for ad in tmp[idx]:
-                new_ad = deepcopy(ad)
+        # tmp에 있는 불필요 정보 삭제해서 new_ads로 복사
+        new_ads = deepcopy(tmp)
+        for idx in range(len(new_ads)):
+            for new_ad in new_ads[idx]:
                 del new_ad['order']
                 del new_ad['publishTime']
                 del new_ad['dropTime']
                 del new_ad['status']
                 if 'likes_per_refresh_time' in new_ad:
                     del new_ad['likes_per_refresh_time']
-                new_ads[idx].append(new_ad)
         
         # 베스트 의견 선정 및 계산
         best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=all_candidates_dropped)
 
-        # 불필요 정보 삭제
+        # best_opinions에 있는 불필요 정보 삭제
         for team_id in range(len(new_ads)):
             for opinion in best_opinions[team_id]:
                 del opinion['order']
