@@ -81,7 +81,7 @@ def init_join_handler(event, context, wsclient):
             'connectionID': {'S': connection_id},
             'battleID': {'S': battle_id},
             'teamID': {'S': team_id},
-            'currRound': {'S': round},
+            # 'currRound': {'S': round},
             'userID': {'S': user_id},
             'nickname': {'S': nickname}
         }
@@ -133,11 +133,37 @@ def send_handler(event, context, wsclient):
 
     # PK: userId, battleId, roundNo, time
     # extra fields: noOfLikes, content, status
-    round, num_of_likes = json.loads(event['body'])['round'], 0
+    num_of_likes =  0
     opinion = json.loads(event['body'])['opinion']
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info[
         'battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
+    round = get_single_current_round(battle_id)
+
+    if round == -1:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "result": "Error",
+                "message": "Either no rounds are on-going or the battle has ended"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "ERROR NO round has started"
+        }
+    elif round == 0:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "result": "Error",
+                "message": "You can't send opinion on ROUND 0!!!!"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "You are on round 0"
+        }
 
     insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\', NULL, NULL, \'{status}\')'
     psql_ctx.execute_query(insert_query)
@@ -276,6 +302,8 @@ def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
 def preparation_start_handler(event, context, wsclient):
     # 토론의 Host와 라운드의 갱신 주기, 갱신 횟수 얻기
     my_battle_id = json.loads(event['body'])['battleId']
+    connection_id = event['requestContext']['connectionId']
+
     select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
     rows = psql_ctx.execute_query(select_query)
     f = csv.reader([rows[0][0]], delimiter=',', quotechar='\"')
@@ -300,12 +328,53 @@ def preparation_start_handler(event, context, wsclient):
                     ['S'], "teamID": connection['teamID']['S']} for connection in response]
 
     old_ads = [[], []]
+
+    curr_round = get_single_current_round(my_battle_id)
+    if curr_round == -1:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "result": "Error",
+                "message": "Either no rounds are on-going or the battle has ended"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "ERROR NO round has started"
+        }
+    elif curr_round == 0:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "result": "Error",
+                "message": "You can't send opinion on ROUND 0!!!!"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "You are on round 0"
+        }
+
     for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
 
         # 현재 라운드의 모든 의견을 가져온다.
-        my_battle_id, curr_round = json.loads(
-            event['body'])['battleId'], json.loads(event['body'])['round']
+        my_battle_id = json.loads(event['body'])['battleId']
+
+        if curr_round == -1:
+            wsclient.send(
+                connection_id=connection_id,
+                data={
+                    "result": "Error",
+                    "message": "Either no rounds are on-going or the battle has ended"
+                }
+            )
+            return {
+                "statusCode": 400,
+                "body": "ERROR NO round has started"
+            }
+        
+
         select_query = f"""SELECT ("Opinion"."userId","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote") FROM "Opinion", "Support" 
         WHERE "Opinion"."userId" = "Support"."userId" and "Opinion"."battleId" = '{my_battle_id}' and "Support"."battleId" = '{my_battle_id}' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round} and status != 'REPORTED'"""
         rows = psql_ctx.execute_query(select_query)
@@ -410,6 +479,10 @@ def preparation_start_handler(event, context, wsclient):
                 )
 
         old_ads = tmp
+    propagate_data(my_battle_id, wsclient, {
+        "action": "startPreparation",
+        "result": "Cycle Finished"
+    })
 
     response = {
         'stautsCode': 200,
