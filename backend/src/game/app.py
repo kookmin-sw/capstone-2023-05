@@ -914,7 +914,7 @@ def end_round(event, context, wsclient):
         if current_round == max_no_of_rounds:
             end_battle(event, context, wsclient)
             finish_battle_handler(event, context, wsclient)
-        else:
+        elif current_round != 0:
             mid_battle_handler(battle_id, current_round, wsclient)
 
         return {
