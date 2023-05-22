@@ -481,7 +481,7 @@ def create_battle(event, context, wsclient):
                 """)
 
                 # Create N Rounds
-                for round_no in range(1, body['maxNoOfRounds'] + 1):
+                for round_no in range(body['maxNoOfRounds'] + 1):
                     psql_cursor.execute(
                         f"""
                             INSERT INTO \"Round\" 
@@ -789,6 +789,25 @@ def get_start_round(battle_id):
 
 
 def get_single_current_round(battle_id):
+    # Check if it's round 0
+    # with PostgresContext(**db_config) as psql_ctx:
+    #     with psql_ctx.cursor() as psql_cursor:
+    #         round_query = f"""
+    #                 SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
+    #                 AND \"endTime\" IS NULL 
+    #                 AND \"startTime\" IS NULL;
+    #                 """
+    #         psql_cursor.execute(round_query)
+
+    #         rows = psql_cursor.fetchall()
+    #         psql_ctx.commit()
+    # parsed_rows = parse_sql_result(
+    #     rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
+    
+    # # Verify the round 0
+    # if parsed_rows and type(parsed_rows) is list and len(parsed_rows) == get_max_rounds_no(battle_id) + 1:
+    #     return 0
+
     # Get current round from DynamoDB
     with PostgresContext(**db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
@@ -914,6 +933,8 @@ def end_round(event, context, wsclient):
         if current_round == max_no_of_rounds:
             end_battle(event, context, wsclient)
             finish_battle_handler(event, context, wsclient)
+        else:
+            mid_battle_handler(battle_id, current_round, wsclient)
 
         return {
             "statusCode": 200,
@@ -937,6 +958,34 @@ def end_round(event, context, wsclient):
             })
         }
 
+def mid_battle_handler(battle_id, round, wsclient):
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="battleID = :battle_id",
+        ExpressionAttributeValues={":battle_id": {"S": battle_id}},
+        ProjectionExpression="connectionID,userID,teamID"
+    )['Items']
+
+    connections = [connection['connectionID']['S'] for connection in response]
+    
+    select_query = f"SELECT \"vote\", COUNT(\"vote\") FROM \"Support\" WHERE \"battleId\" = \'{battle_id}\' and \"roundNo\" = {round} GROUP BY \"vote\""
+    rows = psql_ctx.execute_query(select_query)
+    return_obj = {str(team_id): vote_cnt for team_id, vote_cnt in rows}
+
+    for connection in connections:
+        wsclient.send(
+            connection_id=connection,
+            data={
+                "action": "getMidResult",
+                "result": return_obj
+            }
+        )
+
+    response = {
+        'stautsCode': 200,
+        'body': 'Getting Final Result Success'
+    }
+    return response   
 
 def finish_battle_handler(event, context, wsclient):
     my_battle_id = json.loads(event['body'])['battleId']
