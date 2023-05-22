@@ -789,25 +789,6 @@ def get_start_round(battle_id):
 
 
 def get_single_current_round(battle_id):
-    # Check if it's round 0
-    # with PostgresContext(**db_config) as psql_ctx:
-    #     with psql_ctx.cursor() as psql_cursor:
-    #         round_query = f"""
-    #                 SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
-    #                 AND \"endTime\" IS NULL 
-    #                 AND \"startTime\" IS NULL;
-    #                 """
-    #         psql_cursor.execute(round_query)
-
-    #         rows = psql_cursor.fetchall()
-    #         psql_ctx.commit()
-    # parsed_rows = parse_sql_result(
-    #     rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
-    
-    # # Verify the round 0
-    # if parsed_rows and type(parsed_rows) is list and len(parsed_rows) == get_max_rounds_no(battle_id) + 1:
-    #     return 0
-
     # Get current round from DynamoDB
     with PostgresContext(**db_config) as psql_ctx:
         with psql_ctx.cursor() as psql_cursor:
