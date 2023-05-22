@@ -934,9 +934,8 @@ def like_handler(event, context, wsclient):
     
     
     battle_id = response[0]['battleID']['S']
-    user_id = json.loads(event['body'])['userId']
     order = json.loads(event['body'])['opinionNo']
-    round = json.loads(event['body'])['round']
+    round = get_single_current_round(battle_id)
     
     # Opinion 테이블에서 해당 의견의 좋아요 수를 1증가 시킨다.
     # Race condition이 있기 때문에 쿼리를 동기화 해야한다.
@@ -944,18 +943,19 @@ def like_handler(event, context, wsclient):
         with PostgresContext(**config.db_config) as psql_ctx:
             with psql_ctx.cursor() as psql_cursor:
                 psql_cursor.execute("BEGIN")
-                psql_cursor.execute(f'SELECT "noOfLikes" FROM "Opinion" WHERE "userId" = \'{user_id}\' AND "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order} FOR UPDATE;')
+                psql_cursor.execute(f'SELECT "noOfLikes" FROM "Opinion" WHERE "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order} FOR UPDATE;')
                 row = psql_cursor.fetchone()      
                 likes = row[0]
-                psql_cursor.execute(f'UPDATE "Opinion" SET "noOfLikes" = {likes + 1} WHERE "userId" = \'{user_id}\' AND "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order}')
+                psql_cursor.execute(f'UPDATE "Opinion" SET "noOfLikes" = {likes + 1} WHERE "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order}')
                 psql_cursor.execute("COMMIT;")
-    except:
+    except Exception as e:
         wsclient.send(
             connection_id=connection_id,
             data={
                 "action": "likeResult",
                 "result": "fail",
                 "opinionNo": order,
+                "round": round,
                 "noOfLikes": "None"
             }
         )
@@ -973,7 +973,7 @@ def like_handler(event, context, wsclient):
             select_query = f"""
                 SELECT "noOfLikes"
                 FROM "Opinion"
-                WHERE "userId" = '{user_id}' AND "battleId" = '{battle_id}' AND "roundNo" = {round} AND "order" = {order}
+                WHERE "battleId" = '{battle_id}' AND "roundNo" = {round} AND "order" = {order}
             """
             psql_cursor.execute(select_query)
             row = psql_cursor.fetchall()
@@ -995,3 +995,25 @@ def like_handler(event, context, wsclient):
         'body': 'Like Success'
     }
     return response
+
+def get_single_current_round(battle_id):
+    # Get current round from DynamoDB
+    with PostgresContext(**db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            round_query = f"""
+                    SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
+                    AND \"endTime\" IS NULL 
+                    AND \"startTime\" IS NOT NULL
+                    ORDER BY \"roundNo\" ASC
+                    LIMIT 1;
+                    """
+            psql_cursor.execute(round_query)
+
+            rows = psql_cursor.fetchall()
+            psql_ctx.commit()
+    parsed_rows = parse_sql_result(
+        rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
+    if parsed_rows and type(parsed_rows) is list:
+        return parsed_rows[0]["roundNo"]
+    else:
+        return -1
