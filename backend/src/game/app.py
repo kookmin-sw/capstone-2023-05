@@ -299,6 +299,7 @@ def preparation_start_handler(event, context, wsclient):
         }
 
     old_ads = [[], []]
+    team1_survived_ad_cnt, team2_survived_ad_cnt = 0, 0
     for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
         print("Old Ads:", old_ads)
@@ -334,8 +335,7 @@ def preparation_start_handler(event, context, wsclient):
                 # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
                 # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
                 if cnt >= 2:
-                    drop_orders.extend([str(ad["order"])
-                                       for ad in old_ads[idx][:3]])
+                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:3]])
                     old_ads[idx] = old_ads[idx][3:]
 
                 for ad in old_ads[idx]:
@@ -435,6 +435,22 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits + string.a
             Random 6 string sequence
     """
     return ''.join(random.choice(chars) for _ in range(size))
+
+
+def parse_sql_result(rows, keys):
+    if not rows:
+        return []
+
+    if len(rows[0]) != len(keys):
+        return Exception('Keys don\'t match the row results')
+
+    parsed_result = []
+    for row in rows:
+        parsed_result.append(dict(zip(keys, row)))
+
+    # For Integrity of datetime
+    parsed_result = json.loads(json.dumps(parsed_result, default=str))
+    return parsed_result
 
 
 def create_battle(event, context, wsclient):
@@ -735,6 +751,29 @@ def end_battle(event, context, wsclient):
                 "Error": str(e)
             })
         }
+
+
+def get_single_current_round(battle_id):
+    # Get current round from DynamoDB
+    with PostgresContext(**db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            round_query = f"""
+                    SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
+                    AND \"endTime\" IS NULL 
+                    AND \"startTime\" IS NOT NULL
+                    ORDER BY \"roundNo\" ASC
+                    LIMIT 1;
+                    """
+            psql_cursor.execute(round_query)
+
+            rows = psql_cursor.fetchall()
+            psql_ctx.commit()
+    parsed_rows = parse_sql_result(
+        rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
+    if parsed_rows and type(parsed_rows) is list:
+        return parsed_rows[0]["roundNo"]
+    else:
+        return -1
 
 
 def start_round(event, context, wsclient):
