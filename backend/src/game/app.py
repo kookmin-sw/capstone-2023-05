@@ -243,12 +243,6 @@ def vote_handler(event, context, wsclient):
             }
         )
         
-
-    
-
-    
-        
-
     response = {
         'statusCode': 200,
         'body': 'Vote Success'
@@ -345,14 +339,12 @@ def preparation_start_handler(event, context, wsclient):
     servived_ad_coutners = [0, 0]
     for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
-        print("Old Ads:", old_ads)
 
         # 현재 라운드의 모든 의견을 가져온다.
         my_battle_id = json.loads(event['body'])['battleId']
         select_query = f"""SELECT "Opinion"."userId","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote" FROM "Opinion", "Support" 
         WHERE "Opinion"."userId" = "Support"."userId" and "Opinion"."battleId" = '{my_battle_id}' and "Support"."battleId" = '{my_battle_id}' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round - 1} and status != 'REPORTED'"""
         rows = psql_ctx.execute_query(select_query)
-        print("SELECTed Opinions:", rows)
 
         # 팀별로 의견을 나눈다.
         candidates, all_candidates_dropped = [[], []], [[], []]
@@ -366,8 +358,6 @@ def preparation_start_handler(event, context, wsclient):
                 all_candidates_dropped[1].append(return_info)
                 if return_info["status"] == "CANDIDATE":
                     candidates[1].append(return_info)
-        print("CANDIDATEs:", candidates)
-        print("all CANDIDATEs DROPPEDs:", all_candidates_dropped)
 
         sampling_number = 12
         tmp = [[], []]
@@ -397,9 +387,6 @@ def preparation_start_handler(event, context, wsclient):
             for ad in tmp[idx][servived_ad_coutners[idx]:] if cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
-        print("TMP:", tmp)
-        print("Orders to PUBLISH:", publish_orders)
-        print("Orders to DROP:", drop_orders)
         if len(publish_orders):
             update_query = f'UPDATE \"Opinion\" SET \"publishTime\"=NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\' , \"status\" = \'PUBLISHED\' WHERE \"order\" IN ({",".join(publish_orders)})'
             psql_ctx.execute_query(update_query)
@@ -420,7 +407,6 @@ def preparation_start_handler(event, context, wsclient):
 
         # 베스트 의견 선정 및 계산
         best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=all_candidates_dropped)
-        print("BEST 3:", best_opinions)
 
         # best_opinions에 있는 불필요 정보 삭제
         for team_id in range(len(new_ads)):
