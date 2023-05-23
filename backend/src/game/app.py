@@ -242,7 +242,7 @@ def vote_handler(event, context, wsclient):
                 "message": "Either no rounds are on-going or the battle has ended"
             }
         )
-        
+
     response = {
         'statusCode': 200,
         'body': 'Vote Success'
@@ -439,7 +439,7 @@ def preparation_start_handler(event, context, wsclient):
                     }
                 )
         old_ads = tmp
-
+        
     propagate_data(my_battle_id, wsclient, {
         "action": "startPreparation",
         "result": "Cycle Finished"
@@ -451,6 +451,7 @@ def preparation_start_handler(event, context, wsclient):
     }
     return response
 
+  
 def response_creator(code, message, data):
     return {
         "statusCode": code,
