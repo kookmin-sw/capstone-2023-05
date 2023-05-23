@@ -440,6 +440,11 @@ def preparation_start_handler(event, context, wsclient):
                 )
         old_ads = tmp
 
+    propagate_data(my_battle_id, wsclient, {
+        "action": "startPreparation",
+        "result": "Cycle Finished"
+    })
+
     response = {
         'stautsCode': 200,
         'body': 'Getting New Ads Success'
@@ -465,6 +470,22 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits + string.a
             Random 6 string sequence
     """
     return ''.join(random.choice(chars) for _ in range(size))
+
+
+def parse_sql_result(rows, keys):
+    if not rows:
+        return []
+
+    if len(rows[0]) != len(keys):
+        return Exception('Keys don\'t match the row results')
+
+    parsed_result = []
+    for row in rows:
+        parsed_result.append(dict(zip(keys, row)))
+
+    # For Integrity of datetime
+    parsed_result = json.loads(json.dumps(parsed_result, default=str))
+    return parsed_result
 
 
 def create_battle(event, context, wsclient):
