@@ -2,7 +2,6 @@ import json
 import boto3
 import time
 import random
-import csv
 import string
 from datetime import datetime
 from copy import deepcopy
@@ -266,10 +265,8 @@ def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
         if status == 'CANDIDATE':
             return -1
 
-        publish_time = datetime.strptime(
-            opinion['publishTime'], '%Y-%m-%d %H:%M:%S.%f')
-        drop_time = datetime.strptime(
-            opinion['dropTime'], '%Y-%m-%d %H:%M:%S.%f') if opinion['dropTime'] else None
+        publish_time = opinion['publishTime']
+        drop_time = opinion['dropTime'] if opinion['dropTime'] else None
 
         time_alive = 0
         # PUBLISHED의 기준
@@ -304,14 +301,9 @@ def preparation_start_handler(event, context, wsclient):
     my_battle_id = json.loads(event['body'])['battleId']
     connection_id = event['requestContext']['connectionId']
 
-    select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
+    select_query = f'SELECT \"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\" FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
     rows = psql_ctx.execute_query(select_query)
-    f = csv.reader([rows[0][0]], delimiter=',', quotechar='\"')
-    single_row = next(f)
-    single_row[0] = int(single_row[0][1:])
-    single_row[1] = int(single_row[1])
-    single_row[2] = single_row[2][:-1]
-    refresh_time, refresh_cnt, owner_id = single_row
+    refresh_time, refresh_cnt, owner_id = rows[0]
 
     # 토론의 팀 ID 값 얻기
     select_query = f"SELECT \"teamId\" FROM \"Team\" WHERE \"battleId\" = \'{my_battle_id}\'"
@@ -324,8 +316,7 @@ def preparation_start_handler(event, context, wsclient):
         ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
         ProjectionExpression="connectionID,userID,teamID"
     )['Items']
-    information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']
-                    ['S'], "teamID": connection['teamID']['S']} for connection in response]
+    information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']} for connection in response]
 
     old_ads = [[], []]
 
@@ -360,33 +351,15 @@ def preparation_start_handler(event, context, wsclient):
 
         # 현재 라운드의 모든 의견을 가져온다.
         my_battle_id = json.loads(event['body'])['battleId']
-
-        if curr_round == -1:
-            wsclient.send(
-                connection_id=connection_id,
-                data={
-                    "result": "Error",
-                    "message": "Either no rounds are on-going or the battle has ended"
-                }
-            )
-            return {
-                "statusCode": 400,
-                "body": "ERROR NO round has started"
-            }
-        
-
-        select_query = f"""SELECT ("Opinion"."userId","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote") FROM "Opinion", "Support" 
+        select_query = f"""SELECT "Opinion"."userId","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote" FROM "Opinion", "Support" 
         WHERE "Opinion"."userId" = "Support"."userId" and "Opinion"."battleId" = '{my_battle_id}' and "Support"."battleId" = '{my_battle_id}' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round - 1} and status != 'REPORTED'"""
         rows = psql_ctx.execute_query(select_query)
 
         # 팀별로 의견을 나눈다.
         candidates, all_candidates_dropped = [[], []], [[], []]
         for row in rows:
-            f = csv.reader([row[0]], delimiter=',', quotechar='\"')
-            row = next(f)
-            return_info = {"userId": row[0][1:], "order": int(row[1]), "likes": int(
-                row[2]), "content": row[3], "publishTime": row[4], "dropTime": row[5], "status": row[6]}
-            if int(row[-1][:-1]) == team_ids[0]:
+            return_info = {"userId": row[0], "order": row[1], "likes": row[2], "content": row[3], "publishTime": row[4], "dropTime": row[5], "status": row[6]}
+            if row[-1] == team_ids[0]:
                 all_candidates_dropped[0].append(return_info)
                 if return_info["status"] == "CANDIDATE":
                     candidates[0].append(return_info)
