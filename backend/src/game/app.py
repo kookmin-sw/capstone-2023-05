@@ -137,7 +137,7 @@ def send_handler(event, context, wsclient):
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info['battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
 
-    insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW(), NULL, NULL, \'{status}\')'
+    insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\', NULL, NULL, \'{status}\')'
     psql_ctx.execute_query(insert_query)
     
     # 같은 팀에게 자신의 의견을 broadcasting 한다.
