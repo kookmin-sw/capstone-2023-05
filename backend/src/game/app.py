@@ -299,7 +299,7 @@ def preparation_start_handler(event, context, wsclient):
         }
 
     old_ads = [[], []]
-    team1_survived_ad_cnt, team2_survived_ad_cnt = 0, 0
+    servived_ad_coutners = [0, 0]
     for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
         print("Old Ads:", old_ads)
@@ -332,17 +332,18 @@ def preparation_start_handler(event, context, wsclient):
         for idx in range(len(old_ads)):
             # 처음에 요청했다면, Ads는 존재하지 않기 때문
             if len(old_ads[idx]):
-                # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
-                # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
+                # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 (최대)3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
+                # tmp[idx]의 0번부터 (최대)2번 index까지 기존에 살아남았던 상위 (최대)3개의 Ads를 담고 있으므로 이들을 잘라낸다.
                 if cnt >= 2:
-                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:3]])
-                    old_ads[idx] = old_ads[idx][3:]
+                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:servived_ad_coutners[idx]]])
+                    old_ads[idx] = old_ads[idx][servived_ad_coutners[idx]:]
 
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
                 old_ads[idx].sort(key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
-                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][3:]])
+                servived_ad_coutners[idx] = len(tmp[idx])
+                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][servived_ad_coutners[idx]:]])
 
             # candidates 중 랜덤 선정
             if (not len(old_ads[idx]) and len(candidates[idx]) <= 12) or (len(old_ads[idx]) and len(candidates[idx]) < 9):
@@ -350,7 +351,7 @@ def preparation_start_handler(event, context, wsclient):
             elif len(old_ads[idx]) and len(candidates[idx]) >= 9:
                 sampling_number = 9
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
-            for ad in tmp[idx][3:] if cnt else tmp[idx]:
+            for ad in tmp[idx][servived_ad_coutners[idx]:] if cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
         print("TMP:", tmp)
