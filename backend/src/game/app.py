@@ -442,7 +442,8 @@ def preparation_start_handler(event, context, wsclient):
 
     propagate_data(my_battle_id, wsclient, {
         "action": "startPreparation",
-        "result": "Cycle Finished"
+        "result": "Cycle Finished",
+        "bestOpinions": best_opinions
     })
 
     response = {
