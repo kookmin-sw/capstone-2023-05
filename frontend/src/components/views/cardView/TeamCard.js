@@ -23,9 +23,7 @@ function TeamCard({ teamId, teamName, teamImage, isSelected, c }) {
         } ${isSelected ? colorset[c].border : "bg-white"}`}
       >
         <img
-          src={
-            "/Users/hoon/Projects/capstone/frontend/src/images/chicken-g8k2s9.png"
-          }
+          src={teamImage}
           className=" h-team-card-img bg-auto bg-red-100 pb-1 rounded-t-card"
           alt={teamName}
         />
