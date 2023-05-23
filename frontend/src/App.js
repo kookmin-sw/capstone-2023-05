@@ -7,8 +7,8 @@ import Battle from "./components/views/Battle/Battle";
 import { BattleProvider } from "context/battle";
 import { Component } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import BattlePageHost from './components/views/BattlePage/BattlePageHost'
-import BeforeStart from './components/views/BeforeStart/BeforeStart'
+import BattlePageHost from "./components/views/BattlePage/BattlePageHost";
+import Ready from "./components/views/Battle/Pages/Ready";
 
 class App extends Component {
   render() {
@@ -29,7 +29,7 @@ class App extends Component {
                 </BattleProvider>
               }
             />
-            <Route path="/before" element={<BeforeStart />} />
+            <Route path="/before" element={<Ready />} />
             <Route path="/teamsOpinions" element={<TeamsOpinions />} />
           </Routes>
         </Router>

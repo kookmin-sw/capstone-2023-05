@@ -9,11 +9,9 @@ const Battle = (props) => {
 
   switch (battleState) {
     case "Ready":
-      console.log("[BattleState] Ready");
-      return <div>Ready</div>;
     case "initTeamSelect":
-      console.log("[BattleState] initTeamSelect");
-      return <div>initTeamSelect</div>;
+      console.log("[BattleState] Ready");
+      return <Ready />;
     case "Preparation":
       console.log("[BattleState] Preparation");
       return <Preparation />;

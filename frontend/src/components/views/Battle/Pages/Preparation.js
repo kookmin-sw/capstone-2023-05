@@ -15,7 +15,6 @@ const Preparation = ({ round }) => {
     socketRef,
     battleState,
     currentRound,
-    currentTeam,
     battleInfo,
     opinions,
     bestOpinion,

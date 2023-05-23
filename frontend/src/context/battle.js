@@ -9,24 +9,28 @@ function BattleProvider({ children }) {
 
   const [battleState, setBattleState] = useState("init");
   const [battleInfo, setBattleInfo] = useState({
-    battleId: "000002",
-    userId: "newuser@gmail.com",
-    nickname: "abc",
+    battleId: "000001",
+    userId: "hoon@kookmin.ac.kr",
+    nickname: "sch",
     isHost: false,
     teams: [
       {
         teamId: 1,
         teamName: "치킨",
+        image:
+          "https://naruhodoo-team-image.s3.ap-northeast-2.amazonaws.com/chicken-g8k2s9.png",
       },
       {
         teamId: 2,
         teamName: "피자",
+        image:
+          "https://naruhodoo-team-image.s3.ap-northeast-2.amazonaws.com/pizza-z9c8y2.png",
       },
     ],
   }); // battleId, userId, nickname
 
-  const [currentRound, setCurrentRound] = useState(1);
-  const [currentTeam, setCurrentTeam] = useState(1);
+  const [currentRound, setCurrentRound] = useState(0);
+  const [currTeamIndex, setCurrTeamIndex] = useState(-1);
 
   const [opinions, setOpinions] = useState([]); // [{nickname, opinion}, ...
   const [ads, setAds] = useState([]); // [{nickname, content}, ...
@@ -80,23 +84,26 @@ function BattleProvider({ children }) {
       // action에 따른 분기 처리
       switch (message.action) {
         case "initJoinResult": // 방 접속 후 팀 정보 수신
-          console.log("[BattleContext] initJoinResult");
-          setBattleInfo((battleInfo) => ({
-            battleId: battleInfo.battleId,
-            userId: battleInfo.userId,
-            nickname: battleInfo.nickname,
+          console.log("[BattleContext] initJoinResult", message);
+          setBattleInfo((prevBattleInfo) => ({
+            ...prevBattleInfo,
             teams: message.teams,
           }));
           setBattleState("Ready");
+          console.log("[BattleContext] battleInfo", battleInfo);
           break;
 
-        // case startBattleBroadcast: // 호스트가 게임 시작
-        // console.log("[BattleContext] startBattle");
-        // setBattleState("initTeamSelect"); // 유저의 화면을 팀 선택으로 전환
-        // break;
+        case "startBattle": // 호스트가 게임 시작
+          console.log("[BattleContext] startBattle");
+          setBattleState("initTeamSelect");
+          break;
 
         case "voteResult":
-          //todo
+          const myTeamId = Number(message.teamId);
+          const index = battleInfo.teams.findIndex(
+            (team) => team.teamId === myTeamId
+          );
+          setCurrTeamIndex(index);
           break;
 
         case "currentRound": // startRound의 Broadcast
@@ -134,15 +141,16 @@ function BattleProvider({ children }) {
           break;
       }
     };
-  }, [opinions]);
+  }, [opinions, battleInfo]);
 
   return (
     <battleContext.Provider
       value={{
         socketRef,
         battleState,
+        setBattleState,
         currentRound,
-        currentTeam,
+        currTeamIndex,
         battleInfo,
         opinions,
         setOpinions,
