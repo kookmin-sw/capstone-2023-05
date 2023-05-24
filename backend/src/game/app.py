@@ -336,7 +336,7 @@ def preparation_start_handler(event, context, wsclient):
         }
 
     old_ads = [[], []]
-    servived_ad_coutners = [0, 0]
+    survived_ad_counters = [0, 0]
     for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
 
@@ -368,15 +368,15 @@ def preparation_start_handler(event, context, wsclient):
                 # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 (최대)3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
                 # tmp[idx]의 0번부터 (최대)2번 index까지 기존에 살아남았던 상위 (최대)3개의 Ads를 담고 있으므로 이들을 잘라낸다.
                 if cnt >= 2:
-                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:servived_ad_coutners[idx]]])
-                    old_ads[idx] = old_ads[idx][servived_ad_coutners[idx]:]
+                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:survived_ad_counters[idx]]])
+                    old_ads[idx] = old_ads[idx][survived_ad_counters[idx]:]
 
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
                 old_ads[idx].sort(key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
-                servived_ad_coutners[idx] = len(tmp[idx])
-                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][servived_ad_coutners[idx]:]])
+                survived_ad_counters[idx] = len(tmp[idx])
+                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][survived_ad_counters[idx]:]])
 
             # candidates 중 랜덤 선정
             if (not len(old_ads[idx]) and len(candidates[idx]) <= 12) or (len(old_ads[idx]) and len(candidates[idx]) < 9):
@@ -384,7 +384,7 @@ def preparation_start_handler(event, context, wsclient):
             elif len(old_ads[idx]) and len(candidates[idx]) >= 9:
                 sampling_number = 9
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
-            for ad in tmp[idx][servived_ad_coutners[idx]:] if cnt else tmp[idx]:
+            for ad in tmp[idx][survived_ad_counters[idx]:] if cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
         if len(publish_orders):
@@ -473,21 +473,6 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits + string.a
     """
     return ''.join(random.choice(chars) for _ in range(size))
 
-
-def parse_sql_result(rows, keys):
-    if not rows:
-        return []
-
-    if len(rows[0]) != len(keys):
-        return Exception('Keys don\'t match the row results')
-
-    parsed_result = []
-    for row in rows:
-        parsed_result.append(dict(zip(keys, row)))
-
-    # For Integrity of datetime
-    parsed_result = json.loads(json.dumps(parsed_result, default=str))
-    return parsed_result
 
 
 def create_battle(event, context, wsclient):
