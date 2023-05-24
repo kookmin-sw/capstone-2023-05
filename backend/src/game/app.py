@@ -441,7 +441,7 @@ def preparation_start_handler(event, context, wsclient):
         old_ads = tmp
         
     propagate_data(my_battle_id, wsclient, {
-        "action": "startPreparation",
+        "action": "endPreparation",
         "result": "Cycle Finished",
         "bestOpinions": best_opinions
     })
