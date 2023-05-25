@@ -7,18 +7,23 @@ module.exports = {
       colors: {
         "back-color": "#29476E", // 남색 배경
         "background-color": "#EAEAEA", // 회색 배경
-        sendBtn: "#F4452F",
+        "sendBtn": "#F4452F",
         "card-normal-A": "#FCE6E2",
         "card-normal-B": "#EEEFFF",
         "card-text-A": "#F95150",
         "card-text-B": "#322BDE",
         "selected-A": "#F4452F",
         "selected-B": "#322BDE",
+        "vote-selected-A": "#FFF6F4",
+        "vote-selected-B": "#F6F7FF",
+        "vote-opinion-A-border": "#FDD5CF",
+        "vote-opinion-B-border": "#DBDAFA",
       },
       backgroundImage: {
         redWin: "url('./images/bg-red-win.png')",
         battleBar: "url('./images/battleBar.png')",
         lobbyBar: "url('./images/lobbyBar.png')",
+        voteBar: "url('./images/voteBar.svg')",
         like: "url('./images/like.svg')",
         star: "url('./images/star.svg')",
         fire: "url('./images/fire.svg')",
@@ -37,6 +42,9 @@ module.exports = {
         nickname: "1.5vh",
         body: "1vh",
       },
+        maxHeight:{
+          'chat':'72vh',
+        },
       height: {
         "7/8": "87.5%",
         "1/8": "12.5%",
