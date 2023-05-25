@@ -5,12 +5,11 @@ import TeamsOpinions from '../cardView/TeamsOpinions'
 
 const ChatComponent = (props) => {
   const [message, setMessage] = useState('');
-  const [opinions, setOpinions] = useState([]);
   const [value, setValue] = useState(0);
   const maxValue = 180; // 3분 = 180초
   const interval = 60; // 1분 = 60초
 
-  const dev = 'wss://rk07acynb6.execute-api.ap-northeast-2.amazonaws.com/dev';
+  const dev = 'wss://rd1hl7qgfi.execute-api.ap-northeast-2.amazonaws.com/dev';
 
   // 서버로부터 받을 데이터
   let recvData;
@@ -44,9 +43,9 @@ const ChatComponent = (props) => {
         // 서버로부터 수신한 메시지 처리
         console.log('수신한 메시지:', recvData['message']);
         if(recvData['action'] === 'recvOpinion')
-          document.getElementById('result').innerHTML += `\n${recvData['nickname']} : ${recvData['opinion']}`;
+        document.getElementById('result').innerHTML += `\n${recvData['nickname']} : ${recvData['opinion']}`;
       });
-
+      
       // 웹소켓 연결이 닫혔을 때 이벤트 핸들러
       socket.addEventListener('close', (event) => {
         console.log('Server에서 disconnection이 와서 WebSocket 연결이 닫혔습니다.', event);
@@ -107,12 +106,7 @@ const ChatComponent = (props) => {
   const messageSend = () => {
     socket.send(JSON.stringify({'action':'sendOpinion', 'round': round, 'opinion': message})); // 서버로 메시지 전송
     console.log(`Message: ${message}  Sent`);
-    
-    // 입력 내용 채팅창에 하드코딩
-    const newOpinion = JSON.stringify({nickname:"상어", opinion:message});
-    setOpinions((prevOpinions) => [...prevOpinions, newOpinion]);
-    
-    setMessage(''); // 메시지 입력 필드 초기화
+    setMessage(""); // 메시지 입력 필드 초기화
   };
   
   const handleKeyPress = (event) => {
@@ -126,12 +120,6 @@ const ChatComponent = (props) => {
       modal.classList.add('absolute');
       modal.classList.remove('hidden');
   }
-
-  useEffect(()=>{
-    const result = document.getElementById('result');
-    result.scrollTop = result.scrollHeight;
-    console.log(`opinions : ${opinions}\n`);
-  }, [opinions])
   
   // 컴포넌트 렌더링
   return (
@@ -164,33 +152,33 @@ const ChatComponent = (props) => {
             </div>
 
             <div className='flex w-full'> {/* best opinions */}
-              <CardComponent data={[`${1}`, `${'닭'}`, `${'아...팀 잘못 선택함...'}`, `${541}`, `${1}`]}/>
-              <CardComponent data={[`${1}`, `${'강아지'}`, `${'치킨도 소스 종류 진짜 많음'}`, `${136}`, `${1}`]}/>
-              <CardComponent data={[`${1}`, `${'곰'}`, `${'치킨에는 단백질이 많다'}`, `${104}`, `${1}`]}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${1}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${1}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${1}`}/>
             </div>
 
             {/* ads */}
             <div className='flex w-full pt-aboveAds'>
               <div className=' inline-block bg-star bg-cover w-3 h-3 mr-3'/>
-              <span className=' font-bold mr-3'>무작위 의견</span>
+              <span className=' font-bold mr-3'>Ads</span>
             </div>
             <div className='flex w-full mt-2'> {/* ads opinions */}
-              <CardComponent data={[`${1}`, `${'사자'}`, `${'치킨 영양성분 ▲열량 253.72kcal ▲단백질 18.77g ▲포화지방 2.86g ▲나트륨 408.19mg'}`, `${12}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'호랑이'}`, `${'단백질 ㅇㅈ'}`, `${25}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'병아리'}`, `${'아...'}`, `${6}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'침팬지'}`, `${'바나나가 더 맛있지'}`, `${1}`, `${0}`]}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
             </div>
             <div className='flex w-full mt-2'> {/* ads opinions */}
-              <CardComponent data={[`${1}`, `${'사자'}`, `${'피자 2조각(300g) 섭취 시`, `나트륨은 1,311.56mg으로 1일 영양소 기준치 2,000mg의 65.6%`, `포화지방은 13.36g으로 1일 영양소 기준치 15g의'}`, `${76}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'염소'}`, `${'솔직히 배달 시켜먹으면 피자는 마진 너무한거 아니냐;;'}`, `${78}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'퐁당'}`, `${'한강 치킨 vs 한강 피자'}`, `${25}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'낙타'}`, `${'KFC 할아버지 맛 못 잊제~'}`, `${23}`, `${0}`]}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
             </div>
             <div className='flex w-full mt-2'> {/* ads opinions */}
-              <CardComponent data={[`${1}`, `${'판다'}`, `${'세상에 나쁜 치킨은 없다!'}`, `${22}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'재규어'}`, `${'황올`, `뿌링클`, `자메이카`, `고추바사삭`, `스노윙`, `청양마요,,`, `이걸 참아?'}`, `${123}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'고릴라'}`, `${'아침 점심 저녁으로 치킨 먹어도 안질림. 내가 해봄 아무튼 해봄 꼬우면 연락하셈 0101-03290-2495'}`, `${56}`, `${0}`]}/>
-              <CardComponent data={[`${1}`, `${'범고래'}`, `${'???: 쿠쿠썸 츀흰'}`, `${8}`, `${0}`]}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
+              <CardComponent data={`${1}, ${nickname}, ${'동해물과 백두산이 마르고 닳도록 하나님이 보우하사 우리나라 만세 무궁화 삼천리 화려 강산 무궁화 삼천리 화려 강산 강산'}, ${123}, ${0}`}/>
             </div>
           </div>
 
@@ -201,59 +189,12 @@ const ChatComponent = (props) => {
 
         {/* 우측 채팅 바 */}
         <div className='flex flex-col w-1/3 bg-white h-full'> 
-          <button onClick={()=>{
-            const newOpinion = JSON.stringify({nickname:"강아지", opinion:"치킨에도 피자 토핑만큼 소스 많음"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion]);
-            const newOpinion2 = JSON.stringify({nickname:"고양이", opinion:"당연히 치느님 아님? 피느님이라는 말 없잖슴 아ㅋㅋ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion2]);
-            const newOpinion3 = JSON.stringify({nickname:"토끼", opinion:"치킨이 올라간 피자도 있는데 그러면 피자가 다 쌈싸먹는거 아니냐?"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion3]);
-            const newOpinion4 = JSON.stringify({nickname:"곰", opinion:"치킨에는 단백질이 많다"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion4]);
-            const newOpinion5 = JSON.stringify({nickname:"호랑이", opinion:"단백질 ㅇㅈ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion5]);
-            const newOpinion6 = JSON.stringify({nickname:"사자", opinion:"도배 ㄴㄴ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion6]);
-            const newOpinion7 = JSON.stringify({nickname:"코끼리", opinion:"ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion7]);
-            const newOpinion8 = JSON.stringify({nickname:"토끼", opinion:"근데 아버지가 퇴근하시고 사오는 통닭은 킹정이지 ㅋㅋ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion8]);
-            const newOpinion9 = JSON.stringify({nickname:"참치", opinion:"치킨은 먹다보면 물림 ㄹㅇ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion9]);
-            const newOpinion10 = JSON.stringify({nickname:"호랑이", opinion:"라떼는,,,전기. 구이. 통닭이. 최고다... 이거야... 요즘 것들은,,, 떼잉 쯧,,,,,,"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion10]);
-            const newOpinion11 = JSON.stringify({nickname:"코끼리", opinion:"닭가슴살도 치킨 아님?"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion11]);
-            const newOpinion12 = JSON.stringify({nickname:"고양이", opinion:"피자가 아무리 맛있다한들, 피자는 탄수화물이 주여서 살 엄청 찌고 치킨은 단백질이 주여서 근성장에 도움되는거 모름?"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion12]);
-            const newOpinion13 = JSON.stringify({nickname:"아나콘다", opinion:"웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! 웅~치킨! "});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion13]);
-            const newOpinion14 = JSON.stringify({nickname:"방울뱀", opinion:"치킨치킨치킨치킨치킨치킨치킨치킨치킨치킨치킨치킨치킨치킨치킨"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion14]);
-            const newOpinion15 = JSON.stringify({nickname:"범고래", opinion:"ㅋㅋㅋㅋㅋㅋㅋㅋㅋ"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion15]);
-            const newOpinion16 = JSON.stringify({nickname:"사자", opinion:"도배 자제좀"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion16]);
-            const newOpinion17 = JSON.stringify({nickname:"연어", opinion:"3대 느님. 연느님, 유느님, 치느님"});
-            setOpinions((prevOpinions) => [...prevOpinions, newOpinion17]);
-          }}>add new opinion</button>
-          <div id='result' className='flex flex-col text-sm h-7/8 mt-auto leading-none m-3 p-1 border border-solid overflow-y-auto max-h-chat'>
-            {opinions.map((item, index) => (
-              <div key={index} className={`flex ${index==0 ? 'mt-auto':''} text-gray-800 px-4 py-2`}>
-                <div className=' inline-block w-1/8'>
-                  {JSON.parse(item).nickname}
-                </div>
-                <div className=' inline-block w-7/8'>
-                  {JSON.parse(item).opinion}
-                </div>
-              </div>
-            ))}
-          </div>
+          <div id='result' className='rounded text-md leading-none border-dotted border-x-4 border-y-4 border-back-color mx-5 my-5 px-1 py-1 inline-block'></div>
           {/* 아래 채팅 박스 */}
           <div id='chat' className='flex mt-auto border-t-2 h-1/8 items-center justify-center'>
             <div className='flex items-center w-5/6 h-1/2'>
-              <input type="text" id='txt' className=' bg-background-color rounded-lg h-full w-sendChat px-2' placeholder='Enter your opinion' value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={handleKeyPress} />
-              <button id='send' disabled={!message} className={`text-sm rounded-lg text-white ml-auto w-sendbtn h-full ${!message?' bg-gray-400':' bg-sendBtn'}`} onClick={messageSend}>Send</button>
+              <input type="text" id='txt' className=' bg-background-color rounded-lg h-full w-sendChat px-2' placeholder='Enter your opinion' value={message} onChange={(e) => setMessage(e.target.value)} />
+              <button id='send' disabled={!message} className={!message?'text-sm rounded-lg bg-gray-400 text-white ml-auto w-sendbtn h-full':' text-sm rounded-lg bg-sendBtn text-white ml-auto w-sendbtn h-full'} onClick={functionRef.current}>Send</button>
             </div>
           </div>
         </div>

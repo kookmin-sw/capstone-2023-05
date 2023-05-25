@@ -2,7 +2,7 @@ import React from 'react'
 
 function CardComponent(props) {
     //props = {teamId, nickname, opinion, 좋아요 수, best의견인지}
-    const opinions = props.data;
+    const opinions = props.data.split(', ');
     const teamId = Number(opinions[0]);
     const nickname = opinions[1];
     const opinion = opinions[2];
@@ -15,7 +15,7 @@ function CardComponent(props) {
             <div className=' py-2 font-semibold text-nickname'>
                 {nickname}
             </div>
-            <div className=' text-body overflow-auto max-h-12'>
+            <div className=' text-body scroll'>
                 {opinion}
             </div>
         </div>
