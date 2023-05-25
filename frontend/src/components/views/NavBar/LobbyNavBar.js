@@ -28,13 +28,6 @@ export default class LobbyNavBar extends Component {
           </Link>
           <div className="ml-auto">
             <Link
-              to="/makeRoom"
-              style={this.customButton}
-              className=" text-sm px-4 py-2 leading-none border rounded bg-transparent text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white hover:border-back-color mb-0 "
-            >
-              방 만들기
-            </Link>
-            <Link
               to="/before"
               style={this.customButton}
               className=" text-sm px-4 py-2 leading-none border rounded bg-transparent text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white hover:border-back-color mb-0 ml-5"
@@ -54,6 +47,20 @@ export default class LobbyNavBar extends Component {
               className=" text-sm px-4 py-2 leading-none border rounded bg-transparent text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white hover:border-back-color mb-0 ml-5"
             >
               게임
+            </Link>
+            <Link
+              to="/result"
+              style={this.customButton}
+              className=" text-sm px-4 py-2 leading-none border rounded bg-transparent text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white hover:border-back-color mb-0 ml-5"
+            >
+              결과
+            </Link>
+            <Link
+              to="/vote"
+              style={this.customButton}
+              className=" text-sm px-4 py-2 leading-none border rounded bg-transparent text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white hover:border-back-color mb-0 ml-5"
+            >
+              투표
             </Link>
           </div>
         </div>

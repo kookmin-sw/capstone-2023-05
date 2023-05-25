@@ -6,12 +6,6 @@ function ModalOpinions(props) {
     const rank = data.rank;
     const opinion = data.opinion;
     const likes = Number(data.likes);
-
-    console.log(data);
-    console.log(team);
-    console.log(rank);
-    console.log(opinion);
-    console.log(likes);
   return (
     <div className='flex h-20 mb-5'>
         {/* 순위 */}
