@@ -17,6 +17,7 @@ module.exports = {
       },
       backgroundImage: {
         battleBar: "url('./images/battleBar.png')",
+        lobbyBar: "url('./images/lobbyBar.png')",
         like: "url('./images/like.svg')",
         star: "url('./images/star.svg')",
         fire: "url('./images/fire.svg')",
