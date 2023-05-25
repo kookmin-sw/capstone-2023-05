@@ -3,6 +3,9 @@ import boto3
 import time
 import random
 import string
+import os
+import openai
+
 from datetime import datetime
 from copy import deepcopy
 
@@ -15,6 +18,7 @@ from src.utility.websocket import wsclient
 
 dynamo_db = boto3.client(**dynamo_db_config)
 psql_ctx = PostgresContext(**db_config)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def hello():
@@ -134,6 +138,7 @@ def send_handler(event, context, wsclient):
     # extra fields: noOfLikes, content, status
     num_of_likes =  0
     opinion = json.loads(event['body'])['opinion']
+
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info[
         'battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
@@ -163,6 +168,27 @@ def send_handler(event, context, wsclient):
             "statusCode": 400,
             "body": "You are on round 0"
         }
+
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    round, num_of_likes = get_single_current_round(battle_id), 0
+    opinion = json.loads(event['body'])['opinion']
+
+    if filter_opinion(opinion) == 1:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "action": "recvOpinion",
+                "message": "That's bad opinion"
+            }
+        )
+
+        response = {
+            'statusCode': 422,
+            'body': 'Send bad opinion!'
+        }
+    
+        return response
 
     insert_query = f'INSERT INTO \"Opinion\" (\"userId\", \"battleId\", \"roundNo\", \"noOfLikes\", content, \"timestamp\", \"publishTime\", \"dropTime\", \"status\") VALUES (\'{user_id}\', \'{battle_id}\', {round}, {num_of_likes}, \'{opinion}\', NOW() AT TIME ZONE \'UTC\' + INTERVAL \'9 hours\', NULL, NULL, \'{status}\')'
     psql_ctx.execute_query(insert_query)
@@ -1036,3 +1062,98 @@ def finish_battle_handler(event, context, wsclient):
         'body': 'Getting Final Result Success'
     }
     return response
+
+
+def like_handler(event, context, wsclient):
+    connection_id = event['requestContext']['connectionId']
+
+    # DynamoDB에서 유저 정보 찾기
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="connectionID = :connection_id",
+        ExpressionAttributeValues={":connection_id": {"S": connection_id}},
+        ProjectionExpression="battleID,connectionID,nickname,userID"
+    )['Items']
+    
+    
+    battle_id = response[0]['battleID']['S']
+    order = json.loads(event['body'])['opinionNo']
+    round = get_single_current_round(battle_id)
+    
+    # Opinion 테이블에서 해당 의견의 좋아요 수를 1증가 시킨다.
+    # Race condition이 있기 때문에 쿼리를 동기화 해야한다.
+    try:
+        with PostgresContext(**config.db_config) as psql_ctx:
+            with psql_ctx.cursor() as psql_cursor:
+                psql_cursor.execute("BEGIN")
+                psql_cursor.execute(f'SELECT "noOfLikes" FROM "Opinion" WHERE "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order} FOR UPDATE;')
+                row = psql_cursor.fetchone()      
+                likes = row[0]
+                psql_cursor.execute(f'UPDATE "Opinion" SET "noOfLikes" = {likes + 1} WHERE "battleId" = \'{battle_id}\' AND "roundNo" = {round} AND "order" = {order}')
+                psql_cursor.execute("COMMIT;")
+    except Exception as e:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "action": "likeResult",
+                "result": "fail",
+                "opinionNo": order,
+                "round": round,
+                "noOfLikes": "None"
+            }
+        )
+
+        response = {
+            'statusCode': 400,
+            'body': 'Like Fail'
+        }
+        return response
+    
+    # Opinion 테이블에서 해당 의견의 좋아요 수를 가져온다.
+    with PostgresContext(**config.db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+
+            select_query = f"""
+                SELECT "noOfLikes"
+                FROM "Opinion"
+                WHERE "battleId" = '{battle_id}' AND "roundNo" = {round} AND "order" = {order}
+            """
+            psql_cursor.execute(select_query)
+            row = psql_cursor.fetchall()
+            no_of_likes = row[0][0]
+    
+    # Response 전송
+    wsclient.send(
+        connection_id=connection_id,
+        data={
+            "action": "likeResult",
+            "result": "success",
+            "opinionNo": order,
+            "noOfLikes": no_of_likes
+        }
+    )
+
+    response = {
+        'statusCode': 200,
+        'body': 'Like Success'
+    }
+    return response
+
+def filter_opinion(opinion):
+    prompt = f'''
+    아래의 backtick으로 감싸진 문장은 어떤 토론에서 제시된 의견이다. 
+    문장을 확인하고 비방 및 욕설이 있는 의견 혹은 남에게 몹시 불쾌감을 주는 의견이라면 1, 아니라면 0의 값을 return해라.
+    이 때, 반환값은 python의 int() 함수를 사용하여 타입 캐스팅이 가능해야 한다.
+    ```
+    {opinion}
+    ```
+    '''
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    message = response.choices[0].message.content
+    return int(message.strip())
