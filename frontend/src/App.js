@@ -19,6 +19,7 @@ class App extends Component {
             <Route exact path="/" element={<LandingPage />} />
             {/* <Route path="/makeRoom" element={<MakingRoomPage />} /> */}
             <Route path="/host" element={<BattlePageHost />} />
+            <Route path="/before" element={<Ready />} />
             <Route path="/makeRoom" element={<MakingRoomPage />} />
             <Route path="/mypage" element={<MyPage />} />
             <Route
