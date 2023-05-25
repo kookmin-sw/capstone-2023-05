@@ -16,6 +16,7 @@ module.exports = {
         "selected-B": "#322BDE",
       },
       backgroundImage: {
+        redWin: "url('./images/bg-red-win.png')",
         battleBar: "url('./images/battleBar.png')",
         lobbyBar: "url('./images/lobbyBar.png')",
         like: "url('./images/like.svg')",

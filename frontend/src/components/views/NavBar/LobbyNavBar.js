@@ -48,6 +48,13 @@ export default class LobbyNavBar extends Component {
             >
               게임
             </Link>
+            <Link
+              to="/result"
+              style={this.customButton}
+              className=" text-sm px-4 py-2 leading-none border rounded bg-transparent text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white hover:border-back-color mb-0 ml-5"
+            >
+              결과
+            </Link>
           </div>
         </div>
       </nav>

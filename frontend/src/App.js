@@ -9,6 +9,7 @@ import { Component } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import BattlePageHost from "./components/views/BattlePage/BattlePageHost";
 import Ready from "./components/views/Battle/Pages/Ready";
+import FinalResult from "components/views/Battle/Pages/FinalResult";
 
 class App extends Component {
   render() {
@@ -30,6 +31,7 @@ class App extends Component {
                 </BattleProvider>
               }
             />
+            <Route path="/result" element={<FinalResult />} />
             <Route path="/before" element={<Ready />} />
             <Route path="/teamsOpinions" element={<TeamsOpinions />} />
           </Routes>
