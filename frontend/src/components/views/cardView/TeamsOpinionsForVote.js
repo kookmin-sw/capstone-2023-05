@@ -10,7 +10,7 @@ function TeamsOpinionsForVote() {
       <div className="flex flex-col w-[810px] h-[700px] rounded-card bg-white">
         <div className="flex items-center justify-center rounded-t-card bg-voteBar bg-cover text-white h-[105px]">
           <span className=" font-semibold text-4xl">
-          2 Round 
+          1 Round 
           </span>
           <span className="ml-3 font-light text-4xl">
           Open Vote
