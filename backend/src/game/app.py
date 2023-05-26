@@ -139,6 +139,7 @@ def send_handler(event, context, wsclient):
     # extra fields: noOfLikes, content, status
     num_of_likes =  0
     opinion = json.loads(event['body'])['opinion']
+
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info[
         'battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
@@ -255,6 +256,7 @@ def vote_handler(event, context, wsclient):
             connection_id=connection_id,
             data={
                 "action": "voteSent",
+
                 "result": "success",
                 "teamId": team_id,
                 "teamName": team_name
@@ -1004,6 +1006,7 @@ def end_round(event, context, wsclient):
         elif current_round != 0:
             get_mid_result(battle_id, current_round, wsclient)
 
+
         return {
             "statusCode": 200,
             "body": json.dumps({
@@ -1039,6 +1042,7 @@ def get_mid_result(battle_id, round, wsclient):
     select_query = f"SELECT \"vote\", COUNT(\"vote\") FROM \"Support\" WHERE \"battleId\" = \'{battle_id}\' and \"roundNo\" = {round} GROUP BY \"vote\""
     rows = psql_ctx.execute_query(select_query)
     return_obj = {str(team_id): vote_cnt for team_id, vote_cnt in rows}
+
 
     for connection in connections:
         wsclient.send(
@@ -1167,25 +1171,21 @@ def like_handler(event, context, wsclient):
     }
     return response
 
+def filter_opinion(opinion):
+    prompt = f'''
+    아래의 backtick으로 감싸진 문장은 어떤 토론에서 제시된 의견이다. 
+    문장을 확인하고 비방 및 욕설이 있는 의견 혹은 남에게 몹시 불쾌감을 주는 의견이라면 1, 아니라면 0의 값을 return해라.
+    이 때, 반환값은 python의 int() 함수를 사용하여 타입 캐스팅이 가능해야 한다.
+    ```
+    {opinion}
+    ```
+    '''
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
 
-def get_single_current_round(battle_id):
-    # Get current round from DynamoDB
-    with PostgresContext(**db_config) as psql_ctx:
-        with psql_ctx.cursor() as psql_cursor:
-            round_query = f"""
-                    SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
-                    AND \"endTime\" IS NULL 
-                    AND \"startTime\" IS NOT NULL
-                    ORDER BY \"roundNo\" ASC
-                    LIMIT 1;
-                    """
-            psql_cursor.execute(round_query)
-
-            rows = psql_cursor.fetchall()
-            psql_ctx.commit()
-    parsed_rows = parse_sql_result(
-        rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
-    if parsed_rows and type(parsed_rows) is list:
-        return parsed_rows[0]["roundNo"]
-    else:
-        return -1
+    message = response.choices[0].message.content
+    return int(message.strip())
