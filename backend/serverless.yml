@@ -164,11 +164,16 @@ functions:
       - websocket:
           route: preparationStart
     timeout: 100
-  finish-battle-handler:
-    handler: src/lambda/handler.finish_battle_handler
+  get-final-result:
+    handler: src/lambda/handler.get_final_result
     events:
       - websocket:
-          route: finishBattle
+          route: getFinalResult
+  get-mid-result:
+    handler: src/lambda/handler.get_mid_result
+    events:
+      - websocket:
+          route: getMidResult
 
 custom:
   customDomain:
