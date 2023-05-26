@@ -239,7 +239,7 @@ const ChatComponent = (props) => {
           }}>add new opinion</button>
           <div id='result' className='flex flex-col text-sm h-7/8 mt-auto leading-none m-3 p-1 border border-solid overflow-y-auto max-h-chat'>
             {opinions.map((item, index) => (
-              <div key={index} className={`flex ${index==0 ? 'mt-auto':''} text-gray-800 px-4 py-2`}>
+              <div key={index} className={`flex ${index==0 ? 'mt-auto' : ''} text-gray-800 px-4 py-2`}>
                 <div className=' inline-block w-1/8'>
                   {JSON.parse(item).nickname}
                 </div>
