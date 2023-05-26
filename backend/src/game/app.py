@@ -2,7 +2,6 @@ import json
 import boto3
 import time
 import random
-import csv
 import string
 import os
 import openai
@@ -85,7 +84,7 @@ def init_join_handler(event, context, wsclient):
             'connectionID': {'S': connection_id},
             'battleID': {'S': battle_id},
             'teamID': {'S': team_id},
-            'currRound': {'S': round},
+            # 'currRound': {'S': round},
             'userID': {'S': user_id},
             'nickname': {'S': nickname}
         }
@@ -136,9 +135,39 @@ def send_handler(event, context, wsclient):
             'body': json.dumps({'message': "Cannot find your connection information"})
         }
 
+    # PK: userId, battleId, roundNo, time
+    # extra fields: noOfLikes, content, status
+    num_of_likes =  0
+    opinion = json.loads(event['body'])['opinion']
     user_id, battle_id, team_id, nickname = my_info['userID']['S'], my_info[
         'battleID']['S'], my_info['teamID']['S'], my_info['nickname']['S']
     status = "CANDIDATE"
+    round = get_single_current_round(battle_id)
+
+    if round == -1:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "result": "Error",
+                "message": "Either no rounds are on-going or the battle has ended"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "ERROR NO round has started"
+        }
+    elif round == 0:
+        wsclient.send(
+            connection_id=my_connection_id,
+            data={
+                "result": "Error",
+                "message": "You can't send opinion on ROUND 0!!!!"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "You are on round 0"
+        }
 
     # PK: userId, battleId, roundNo, time
     # extra fields: noOfLikes, content, status
@@ -216,22 +245,29 @@ def vote_handler(event, context, wsclient):
     rows = psql_ctx.execute_query(select_query)
     team_name = rows[0][0]
 
-    # 팀 선택 결과 전송
-    wsclient.send(
-        connection_id=connection_id,
-        data={
-            "action": "voteSent",
-            "result": "success",
-            "teamId": team_id,
-            "teamName": team_name
-        }
-    )
-
     # Support 테이블에 팀 선택 기록 저장
-    round = json.loads(event['body'])['round']
-    if round:
+    round = get_single_current_round(battle_id)
+    if round != -1:
         insert_query = f'INSERT INTO \"Support\" VALUES (\'{user_id}\', \'{battle_id}\', {round}, {team_id}, \'{vote_time}\')'
         psql_ctx.execute_query(insert_query)
+        # 팀 선택 결과 전송
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "action": "voteSent",
+                "result": "success",
+                "teamId": team_id,
+                "teamName": team_name
+            }
+        )
+    else:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "result": "Error",
+                "message": "Either no rounds are on-going or the battle has ended"
+            }
+        )
 
     response = {
         'statusCode': 200,
@@ -249,10 +285,8 @@ def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
         if status == 'CANDIDATE':
             return -1
 
-        publish_time = datetime.strptime(
-            opinion['publishTime'], '%Y-%m-%d %H:%M:%S.%f')
-        drop_time = datetime.strptime(
-            opinion['dropTime'], '%Y-%m-%d %H:%M:%S.%f') if opinion['dropTime'] else None
+        publish_time = opinion['publishTime']
+        drop_time = opinion['dropTime'] if opinion['dropTime'] else None
 
         time_alive = 0
         # PUBLISHED의 기준
@@ -283,50 +317,66 @@ def get_best_opinions(n_best_opinions, candidate_dropped_opinions):
 
 
 def preparation_start_handler(event, context, wsclient):
-    # 토론의 Host와 라운드의 갱신 주기, 갱신 횟수 얻기
     my_battle_id = json.loads(event['body'])['battleId']
-    select_query = f'SELECT (\"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\") FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
-    rows = psql_ctx.execute_query(select_query)
-    f = csv.reader([rows[0][0]], delimiter=',', quotechar='\"')
-    single_row = next(f)
-    single_row[0] = int(single_row[0][1:])
-    single_row[1] = int(single_row[1])
-    single_row[2] = single_row[2][:-1]
-    refresh_time, refresh_cnt, owner_id = single_row
+    connection_id = event['requestContext']['connectionId']
 
-    # 토론의 팀 ID 값 얻기
+    select_query = f'SELECT \"refreshPeriod\", \"maxNoOfRefresh\", \"ownerId\" FROM \"DiscussionBattle\" WHERE \"battleId\" = \'{my_battle_id}\''
+    rows = psql_ctx.execute_query(select_query)
+    refresh_time, refresh_cnt, owner_id = rows[0]
+
     select_query = f"SELECT \"teamId\" FROM \"Team\" WHERE \"battleId\" = \'{my_battle_id}\'"
     team_ids = [row[0] for row in psql_ctx.execute_query(select_query)]
 
-    # 토론에 참여하고 있는 connection들 얻기
     response = dynamo_db.scan(
         TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
         FilterExpression="battleID = :battle_id",
         ExpressionAttributeValues={":battle_id": {"S": my_battle_id}},
         ProjectionExpression="connectionID,userID,teamID"
     )['Items']
-    information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']
-                    ['S'], "teamID": connection['teamID']['S']} for connection in response]
+    information = [{"connectionID": connection['connectionID']['S'], "userID": connection['userID']['S'], "teamID": connection['teamID']['S']} for connection in response]
+
+    curr_round = get_single_current_round(my_battle_id)
+    if curr_round == -1:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "result": "Error",
+                "message": "Either no rounds are on-going or the battle has ended"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "ERROR NO round has started"
+        }
+    elif curr_round == 0:
+        wsclient.send(
+            connection_id=connection_id,
+            data={
+                "result": "Error",
+                "message": "You can't send opinion on ROUND 0!!!!"
+            }
+        )
+        return {
+            "statusCode": 400,
+            "body": "You are on round 0"
+        }
 
     old_ads = [[], []]
+    survived_ad_counters = [0, 0]
     for cnt in range(refresh_cnt):
         time.sleep(refresh_time)
 
         # 현재 라운드의 모든 의견을 가져온다.
-        my_battle_id, curr_round = json.loads(
-            event['body'])['battleId'], json.loads(event['body'])['round']
-        select_query = f"""SELECT ("Opinion"."userId","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote") FROM "Opinion", "Support"
-        WHERE "Opinion"."userId" = "Support"."userId" and "Opinion"."battleId" = '{my_battle_id}' and "Support"."battleId" = '{my_battle_id}' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round} and status != 'REPORTED'"""
+        my_battle_id = json.loads(event['body'])['battleId']
+        select_query = f"""SELECT "Opinion"."userId","Opinion"."order","Opinion"."noOfLikes","Opinion"."content", "Opinion"."publishTime", "Opinion"."dropTime", "Opinion"."status","Support"."vote" FROM "Opinion", "Support" 
+        WHERE "Opinion"."userId" = "Support"."userId" and "Opinion"."battleId" = '{my_battle_id}' and "Support"."battleId" = '{my_battle_id}' and "Opinion"."roundNo" = {curr_round} and "Support"."roundNo" = {curr_round - 1} and status != 'REPORTED'"""
         rows = psql_ctx.execute_query(select_query)
 
         # 팀별로 의견을 나눈다.
         candidates, all_candidates_dropped = [[], []], [[], []]
         for row in rows:
-            f = csv.reader([row[0]], delimiter=',', quotechar='\"')
-            row = next(f)
-            return_info = {"userId": row[0][1:], "order": int(row[1]), "likes": int(
-                row[2]), "content": row[3], "publishTime": row[4], "dropTime": row[5], "status": row[6]}
-            if int(row[-1][:-1]) == team_ids[0]:
+            return_info = {"userId": row[0], "order": row[1], "likes": row[2], "content": row[3], "publishTime": row[4], "dropTime": row[5], "status": row[6]}
+            if row[-1] == team_ids[0]:
                 all_candidates_dropped[0].append(return_info)
                 if return_info["status"] == "CANDIDATE":
                     candidates[0].append(return_info)
@@ -341,20 +391,18 @@ def preparation_start_handler(event, context, wsclient):
         for idx in range(len(old_ads)):
             # 처음에 요청했다면, Ads는 존재하지 않기 때문
             if len(old_ads[idx]):
-                # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
-                # tmp[idx]의 0번부터 2번 index까지 기존에 살아남았던 상위 3개의 Ads를 담고 있으므로 이들을 잘라낸다.
+                # refresh_cnt 값이 2 이상이면, 기존에 살아남았던 상위 (최대)3개의 Ads는 한 번만 더 살아남고 DROPPED 되어야 한다.
+                # tmp[idx]의 0번부터 (최대)2번 index까지 기존에 살아남았던 상위 (최대)3개의 Ads를 담고 있으므로 이들을 잘라낸다.
                 if cnt >= 2:
-                    drop_orders.extend([str(ad["order"])
-                                       for ad in old_ads[idx][:3]])
-                    old_ads[idx] = old_ads[idx][3:]
+                    drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][:survived_ad_counters[idx]]])
+                    old_ads[idx] = old_ads[idx][survived_ad_counters[idx]:]
 
                 for ad in old_ads[idx]:
                     ad["likes_per_refresh_time"] = ad["likes"] / refresh_time
-                old_ads[idx].sort(
-                    key=lambda x: x["likes_per_refresh_time"], reverse=True)
+                old_ads[idx].sort(key=lambda x: x["likes_per_refresh_time"], reverse=True)
                 tmp[idx].extend(old_ads[idx][:3])
-                drop_orders.extend([str(ad["order"])
-                                   for ad in old_ads[idx][3:]])
+                survived_ad_counters[idx] = len(tmp[idx])
+                drop_orders.extend([str(ad["order"]) for ad in old_ads[idx][survived_ad_counters[idx]:]])
 
             # candidates 중 랜덤 선정
             if (not len(old_ads[idx]) and len(candidates[idx]) <= 12) or (len(old_ads[idx]) and len(candidates[idx]) < 9):
@@ -362,7 +410,7 @@ def preparation_start_handler(event, context, wsclient):
             elif len(old_ads[idx]) and len(candidates[idx]) >= 9:
                 sampling_number = 9
             tmp[idx].extend(random.sample(candidates[idx], sampling_number))
-            for ad in tmp[idx][3:] if refresh_cnt else tmp[idx]:
+            for ad in tmp[idx][survived_ad_counters[idx]:] if cnt else tmp[idx]:
                 publish_orders.append(str(ad['order']))
 
         if len(publish_orders):
@@ -384,8 +432,7 @@ def preparation_start_handler(event, context, wsclient):
                     del new_ad['likes_per_refresh_time']
 
         # 베스트 의견 선정 및 계산
-        best_opinions = get_best_opinions(
-            n_best_opinions=3, candidate_dropped_opinions=all_candidates_dropped)
+        best_opinions = get_best_opinions(n_best_opinions=3, candidate_dropped_opinions=all_candidates_dropped)
 
         # best_opinions에 있는 불필요 정보 삭제
         for team_id in range(len(new_ads)):
@@ -417,8 +464,13 @@ def preparation_start_handler(event, context, wsclient):
                         "newAds": new_ads[0] if int(info['teamID']) == team_ids[0] else new_ads[1]
                     }
                 )
-
         old_ads = tmp
+        
+    propagate_data(my_battle_id, wsclient, {
+        "action": "endPreparation",
+        "result": "Cycle Finished",
+        "bestOpinions": best_opinions
+    })
 
     response = {
         'stautsCode': 200,
@@ -426,7 +478,7 @@ def preparation_start_handler(event, context, wsclient):
     }
     return response
 
-
+  
 def response_creator(code, message, data):
     return {
         "statusCode": code,
@@ -510,7 +562,7 @@ def create_battle(event, context, wsclient):
                 """)
 
                 # Create N Rounds
-                for round_no in range(1, body['maxNoOfRounds'] + 1):
+                for round_no in range(body['maxNoOfRounds'] + 1):
                     psql_cursor.execute(
                         f"""
                             INSERT INTO \"Round\"
@@ -942,11 +994,15 @@ def end_round(event, context, wsclient):
                 "maxRound": max_no_of_rounds
             }
         })
+    
+        time.sleep(2)
 
         # Check if the battle is ended
         if current_round == max_no_of_rounds:
             end_battle(event, context, wsclient)
             get_final_result(event, context, wsclient)
+        elif current_round != 0:
+            get_mid_result(battle_id, current_round, wsclient)
 
         return {
             "statusCode": 200,
@@ -970,6 +1026,34 @@ def end_round(event, context, wsclient):
             })
         }
 
+def get_mid_result(battle_id, round, wsclient):
+    response = dynamo_db.scan(
+        TableName=config.DYNAMODB_WS_CONNECTION_TABLE,
+        FilterExpression="battleID = :battle_id",
+        ExpressionAttributeValues={":battle_id": {"S": battle_id}},
+        ProjectionExpression="connectionID,userID,teamID"
+    )['Items']
+
+    connections = [connection['connectionID']['S'] for connection in response]
+    
+    select_query = f"SELECT \"vote\", COUNT(\"vote\") FROM \"Support\" WHERE \"battleId\" = \'{battle_id}\' and \"roundNo\" = {round} GROUP BY \"vote\""
+    rows = psql_ctx.execute_query(select_query)
+    return_obj = {str(team_id): vote_cnt for team_id, vote_cnt in rows}
+
+    for connection in connections:
+        wsclient.send(
+            connection_id=connection,
+            data={
+                "action": "midResultReceived",
+                "result": return_obj
+            }
+        )
+
+    response = {
+        'stautsCode': 200,
+        'body': 'Getting Final Result Success'
+    }
+    return response   
 
 def get_final_result(event, context, wsclient):
     my_battle_id = json.loads(event['body'])['battleId']
@@ -994,8 +1078,15 @@ def get_final_result(event, context, wsclient):
             connection_id=connection,
             data={
                 "action": "finalResultReceived",
-                'body': 'Getting Final Result Success'
+                'body': return_obj
             }
+        )
+
+    response = {
+        'stautsCode': 200,
+        'body': 'Getting Final Result Success'
+    }
+    
     return response
 
 
@@ -1075,3 +1166,26 @@ def like_handler(event, context, wsclient):
         'body': 'Like Success'
     }
     return response
+
+
+def get_single_current_round(battle_id):
+    # Get current round from DynamoDB
+    with PostgresContext(**db_config) as psql_ctx:
+        with psql_ctx.cursor() as psql_cursor:
+            round_query = f"""
+                    SELECT * FROM \"Round\" WHERE \"battleId\"=\'{battle_id}\'
+                    AND \"endTime\" IS NULL 
+                    AND \"startTime\" IS NOT NULL
+                    ORDER BY \"roundNo\" ASC
+                    LIMIT 1;
+                    """
+            psql_cursor.execute(round_query)
+
+            rows = psql_cursor.fetchall()
+            psql_ctx.commit()
+    parsed_rows = parse_sql_result(
+        rows=rows, keys=["battleId", "roundNo", "startTime", "endTime", "description"])
+    if parsed_rows and type(parsed_rows) is list:
+        return parsed_rows[0]["roundNo"]
+    else:
+        return -1

@@ -169,6 +169,11 @@ functions:
     events:
       - websocket:
           route: getFinalResult
+  get-mid-result:
+    handler: src/lambda/handler.get_mid_result
+    events:
+      - websocket:
+          route: getMidResult
 
 custom:
   customDomain:
