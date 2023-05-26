@@ -122,6 +122,7 @@ const ChatComponent = (props) => {
 
   useEffect(()=>{
     startTimer();
+    return () => clearInterval(timer);
   },[]);
 
   // 상단배너 아래 타이머 게이지 관련 useEffect
@@ -233,7 +234,7 @@ const ChatComponent = (props) => {
           </div>
 
           {/* timer */}
-          <div className=' flex font-bold pt-aboveBest mr-9 text-gray-500'>0:59</div>
+          <div id='adsTimer' className=' flex font-bold pt-aboveBest mr-9 w-11 text-gray-500'>1:00</div>
 
         </div>
 

@@ -198,7 +198,7 @@ const ChatComponent = (props) => {
           </div>
 
           {/* timer */}
-          <div id='adsTimer' className=' flex font-bold pt-aboveBest mr-9 text-gray-500'>1:00</div>
+          <div id='adsTimer' className=' flex font-bold pt-aboveBest mr-9 w-12 text-gray-500'>1:00</div>
 
         </div>
 
