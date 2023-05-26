@@ -21,6 +21,7 @@ function InGameNavBar(props) {
             document.getElementById('a').classList.add('text-white');
             document.getElementById('a').classList.add('text-opacity-40');
         }
+        return () => clearInterval(roundTimer);
     },[]);
     
     let roundTimer;
