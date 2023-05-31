@@ -1170,22 +1170,3 @@ def like_handler(event, context, wsclient):
         'body': 'Like Success'
     }
     return response
-
-def filter_opinion(opinion):
-    prompt = f'''
-    아래의 backtick으로 감싸진 문장은 어떤 토론에서 제시된 의견이다. 
-    문장을 확인하고 비방 및 욕설이 있는 의견 혹은 남에게 몹시 불쾌감을 주는 의견이라면 1, 아니라면 0의 값을 return해라.
-    이 때, 반환값은 python의 int() 함수를 사용하여 타입 캐스팅이 가능해야 한다.
-    ```
-    {opinion}
-    ```
-    '''
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    message = response.choices[0].message.content
-    return int(message.strip())
