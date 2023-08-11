@@ -1,6 +1,6 @@
 # Naruhodoo (나루호두)
 
-![Banner Image](images/banner.png)
+![Banner Image](images/Group24.png)
 
 > **Github Page Link:** https://kookmin-sw.github.io/capstone-2023-05
 
